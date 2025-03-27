@@ -1,26 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="login.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Management System - Home</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- navbar -->
-    <div class="nav-container">
-        <div class="flex justify-between">
-          <div class="cursor-pointer nav-title">
-            <pre class=""><b>Arniko Secondary School</b></pre>
+  <!-- Header & Navigation -->
+  <header>
+    <nav>
+      <div class="container nav-container">
+        <div class="logo">
+          <a href="index.html">Student Management System</a>
+        </div>
+        <ul class="nav-links">
+          <li><a href="index.html" class="active">Home</a></li>
+          <li><a href="login.html">Sign In</a></li>
+          <li><a href="signup.html">Sign Up</a></li>
+        </ul>
+      </div>
+    </nav>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <h1>Welcome to Your Student Portal</h1>
+        <p>Manage student records, track performance, and streamline communication—all in one place.</p>
+        <a href="signup.html" class="btn">Get Started</a>
+      </div>
+    </section>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Features Section -->
+    <section class="features">
+      <div class="container">
+        <h2>Our Features</h2>
+        <div class="feature-cards">
+          <div class="card">
+            <i class="fas fa-user-graduate"></i>
+            <h3>Student Profiles</h3>
+            <p>Create and manage detailed profiles for every student.</p>
           </div>
-          <div class="flex nav-navigation">
-            <div class="nav-navigation-items">Home</div>
-            <div class="nav-navigation-items">About</div>
-            <div class="nav-navigation-items">Contact</a>
-                  llll
-                  
+          <div class="card">
+            <i class="fas fa-chart-line"></i>
+            <h3>Performance Tracking</h3>
+            <p>Monitor academic progress with comprehensive reports.</p>
+          </div>
+          <div class="card">
+            <i class="fas fa-comments"></i>
+            <h3>Communication</h3>
+            <p>Facilitate seamless communication between educators and students.</p>
           </div>
         </div>
       </div>
-  
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 Student Management System. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Font Awesome for Icons -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
+</html>
