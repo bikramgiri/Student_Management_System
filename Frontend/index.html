@@ -51,10 +51,16 @@
         </section>
     </main>
 
-    <footer class="main-footer">
+    <footer class="main-footer"> 
         <div class="container">
-            <p class="copyright">&copy; [Csit 5th Sem]</p>
+            <p class="copyright">&copy; <span id="year"></span> <span id="systemName"></span></p>
         </div>
     </footer>
+
+    <script>
+        // Dynamic Footer
+        document.getElementById("year").textContent = new Date().getFullYear(); 
+        document.getElementById("systemName").textContent = "Student Management System"; 
+    </script>
 </body>
 </html>

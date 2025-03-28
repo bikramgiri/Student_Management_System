@@ -36,7 +36,8 @@ body {
 
 /* Navigation */
 .main-nav {
-  background: var(--dark-color);
+  background-color: #333;
+  color: white;
   padding: 15px 0;
 }
 
@@ -188,18 +189,19 @@ body {
   font-weight: 500;
 }
 
-/* Footer */
+/* Footer Styling */
 .main-footer {
-  background: var(--dark-color);
-  color: var(--white);
-  padding: 20px 0;
-  margin-top: auto;
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 15px 0;
+  position: fixed;
+  bottom: 0;
   width: 100%;
 }
-
-.copyright {
-  text-align: center;
-  font-size: 0.9rem;
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Responsive Design */
