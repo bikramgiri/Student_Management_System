@@ -22,4 +22,8 @@ const store = configureStore({
   },
 });
 
+store.subscribe(() => {
+  console.log('Redux store updated:', store.getState());
+});
+
 export default store;

@@ -20,6 +20,21 @@ export const submitResult = createAsyncThunk(
   }
 );
 
+export const fetchResults = createAsyncThunk(
+  'results/fetchResults',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const response = await axios.get(`${API_URL}/results/student`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return response.data.results;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch results');
+    }
+  }
+);
+
 const resultSlice = createSlice({
   name: 'results',
   initialState: {
@@ -48,7 +63,10 @@ const resultSlice = createSlice({
         if (action.payload === 'Too many submissions from this user, please try again after an hour') {
           state.error = 'Submission limit reached. Please wait an hour.';
         }
-      });
+      })
+      .addCase(fetchResults.pending, (state) => { state.loading = true; state.error = null; })
+    .addCase(fetchResults.fulfilled, (state, action) => { state.loading = false; state.results = action.payload; })
+    .addCase(fetchResults.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
   },
 });
 

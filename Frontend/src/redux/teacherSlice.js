@@ -11,9 +11,24 @@ export const fetchTeachers = createAsyncThunk(
       const response = await axios.get(`${API_URL}/teachers`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.teachers; // Expect { teachers: [...] }
+      return response.data.teachers;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch teachers');
+    }
+  }
+);
+
+export const fetchAvailableTeachers = createAsyncThunk(
+  'teachers/fetchAvailableTeachers',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const response = await axios.get(`${API_URL}/teachers/available`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return response.data.teachers;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch available teachers');
     }
   }
 );
@@ -26,7 +41,7 @@ export const addTeacher = createAsyncThunk(
       const response = await axios.post(`${API_URL}/teachers`, teacherData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.teacher; // Expect { teacher: {...} }
+      return response.data.teacher;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to add teacher');
     }
@@ -67,6 +82,18 @@ const teacherSlice = createSlice({
         state.teachers = action.payload;
       })
       .addCase(fetchTeachers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchAvailableTeachers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAvailableTeachers.fulfilled, (state, action) => {
+        state.loading = false;
+        state.teachers = action.payload;
+      })
+      .addCase(fetchAvailableTeachers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

@@ -27,6 +27,24 @@ export const fetchStudentsForAttendance = createAsyncThunk(
   }
 );
 
+export const fetchAttendance = createAsyncThunk(
+  'attendance/fetchAttendance',
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const response = await axios.get(`${API_URL}/attendance/student`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return response.data.attendance.map((record) => ({
+        date: record.date,
+        status: record.records[auth.user._id], // Assuming student ID is in records
+      }));
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch attendance');
+    }
+  }
+);
+
 export const submitAttendance = createAsyncThunk(
   'attendance/submitAttendance',
   async (attendanceData, { rejectWithValue, getState }) => {
@@ -86,7 +104,10 @@ const attendanceSlice = createSlice({
         if (action.payload === 'Too many submissions from this user, please try again after an hour') {
           state.error = 'Submission limit reached. Please wait an hour.';
         }
-      });
+      })
+      .addCase(fetchAttendance.pending, (state) => { state.loading = true; state.error = null; })
+    .addCase(fetchAttendance.fulfilled, (state, action) => { state.loading = false; state.attendances = action.payload; })
+    .addCase(fetchAttendance.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
   },
 });
 
