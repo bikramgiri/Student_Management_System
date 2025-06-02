@@ -8,10 +8,24 @@ exports.getTeachers = async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: Students cannot view teacher records' });
     }
     const teachers = await Teacher.find().populate('user', 'name email');
-    res.status(200).json({ teachers }); // Align with teacherSlice.js
+    res.status(200).json({ teachers });
   } catch (error) {
     console.error('Error fetching teachers:', error.message);
     res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// New endpoint for students to fetch available teachers
+exports.getAvailableTeachers = async (req, res) => {
+  try {
+    // No role restriction; accessible to authenticated students
+    const teachers = await Teacher.find()
+      .populate('user', 'name email')
+      .select('user subject _id'); // Limit fields to what's needed
+    res.status(200).json({ teachers });
+  } catch (error) {
+    console.error('Error fetching available teachers:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -44,10 +58,10 @@ exports.addTeacher = async (req, res) => {
       teacherData.experience = experience;
     }
 
-    const teacher = new Teacher({ user, subject, qualification: qualification || '', experience: experience || 0});
+    const teacher = new Teacher(teacherData);
     await teacher.save();
     await teacher.populate('user', 'name email');
-    res.status(201).json({message: 'Teacher added successfully', teacher }); // Align with teacherSlice.js
+    res.status(201).json({ message: 'Teacher added successfully', teacher });
   } catch (error) {
     console.error('Error adding teacher:', error.message);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -85,7 +99,7 @@ exports.updateTeacher = async (req, res) => {
     teacher.experience = experience || teacher.experience;
     await teacher.save();
     await teacher.populate('user', 'name email role');
-    res.status(200).json({ teacher }); // Align with potential update action
+    res.status(200).json({ teacher });
   } catch (error) {
     console.error('Error updating teacher:', error.message);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -117,7 +131,7 @@ exports.getPotentialTeachers = async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: Only Admin can fetch potential teachers' });
     }
     const potentialTeachers = await User.find({ role: 'Teacher' }).select('_id name email');
-    res.status(200).json({ potentialTeachers }); // Align with authSlice.js
+    res.status(200).json({ potentialTeachers });
   } catch (error) {
     console.error('Error fetching potential teachers:', error.message);
     res.status(500).json({ message: 'Internal Server Error' });

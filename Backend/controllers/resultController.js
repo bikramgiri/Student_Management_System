@@ -59,3 +59,14 @@ exports.submitResult = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+exports.getStudentResults = async (req, res) => {
+  try {
+    const { role, _id: studentId } = req.user;
+    if (role !== 'Student') return res.status(403).json({ message: 'Forbidden' });
+    const results = await Result.find({ student: studentId }).populate('teacher', 'name email');
+    res.status(200).json({ results });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

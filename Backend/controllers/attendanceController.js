@@ -53,3 +53,15 @@ exports.submitAttendance = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+exports.getStudentAttendance = async (req, res) => {
+  try {
+    const { role, _id: studentId } = req.user;
+    if (role !== 'Student') return res.status(403).json({ message: 'Forbidden' });
+    const attendance = await Attendance.find({ [`records.${studentId}`]: { $exists: true } })
+      .populate('teacher', 'name email');
+    res.status(200).json({ attendance });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
