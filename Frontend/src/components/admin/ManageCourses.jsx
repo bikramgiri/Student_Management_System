@@ -59,7 +59,7 @@ function ManageCourses() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Manage Courses</h1>
+      <h1 className="text-2xl font-bold mb-4">Manage Subjects</h1>
       {message && (
         <p className={`${message.includes('successfully') ? 'text-green-600' : 'text-red-500'} mb-2`}>{message}</p>
       )}
@@ -75,7 +75,7 @@ function ManageCourses() {
               name="title"
               value={courseData.title}
               onChange={handleChange}
-              placeholder="Course Title"
+              placeholder="Subject Name"
               className="border p-2 rounded"
               required
             />
@@ -84,7 +84,7 @@ function ManageCourses() {
               name="description"
               value={courseData.description}
               onChange={handleChange}
-              placeholder="Course Description"
+              placeholder="Subject Description"
               className="border p-2 rounded"
             />
             {availableTeachers.length === 0 ? (
@@ -117,7 +117,7 @@ function ManageCourses() {
             <table className="w-full border-collapse border">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="border p-2">Title</th>
+                  <th className="border p-2">Name</th>
                   <th className="border p-2">Description</th>
                   <th className="border p-2">Teacher</th>
                   <th className="border p-2">Actions</th>

@@ -1,4 +1,3 @@
-// src/components/admin/ManageLeaves.jsx
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchAllLeaves, updateLeaveStatus } from '../../redux/leaveSlice';
@@ -95,8 +94,10 @@ function ManageLeaves() {
   const filteredLeaves = leaves.filter((leave) => {
     const matchesSearch =
       leave.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      leave.student?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      leave.student?.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (leave.student?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (leave.student?.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (leave.teacher?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (leave.teacher?.email?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || leave.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -106,9 +107,9 @@ function ManageLeaves() {
       return sortOrder === 'asc'
         ? new Date(a.createdAt) - new Date(b.createdAt)
         : new Date(b.createdAt) - new Date(a.createdAt);
-    } else if (sortBy === 'student') {
-      const nameA = a.student?.name || '';
-      const nameB = b.student?.name || '';
+    } else if (sortBy === 'applicant') {
+      const nameA = a.student?.name || a.teacher?.name || '';
+      const nameB = b.student?.name || b.teacher?.name || '';
       return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
     }
     return 0;
@@ -119,6 +120,32 @@ function ManageLeaves() {
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
+
+  // Helper function to get applicant display text
+  const getApplicantDisplay = (leave) => {
+    if (leave.student) {
+      return getStudentDisplay(leave);
+    } else if (leave.teacher) {
+      return getTeacherDisplay(leave);
+    }
+    return 'N/A';
+  };
+
+  // Helper function to get student display text
+  const getStudentDisplay = (leave) => {
+    if (leave.student && leave.student.name) {
+      return `${leave.student.name} (Student, ${leave.student.email || 'No email'})`;
+    }
+    return leave.student?._id ? `Student ID: ${leave.student._id}` : 'N/A';
+  };
+
+  // Helper function to get teacher display text
+  const getTeacherDisplay = (leave) => {
+    if (leave.teacher && leave.teacher.name) {
+      return `${leave.teacher.name} (Teacher, ${leave.teacher.email || 'No email'})`;
+    }
+    return leave.teacher?._id ? `Teacher ID: ${leave.teacher._id}` : 'N/A';
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -140,7 +167,7 @@ function ManageLeaves() {
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <input
             type="text"
-            placeholder="Search by reason or student..."
+            placeholder="Search by reason, student, or teacher..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="border p-2 rounded w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -209,9 +236,9 @@ function ManageLeaves() {
                   </th>
                   <th
                     className="border p-3 text-left text-gray-700 font-semibold cursor-pointer"
-                    onClick={() => handleSort('student')}
+                    onClick={() => handleSort('applicant')}
                   >
-                    Student {sortBy === 'student' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    Applicant {sortBy === 'applicant' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="border p-3 text-left text-gray-700 font-semibold">Reason</th>
                   <th className="border p-3 text-left text-gray-700 font-semibold">Date</th>
@@ -237,7 +264,7 @@ function ManageLeaves() {
                       />
                     </td>
                     <td className="border p-3">
-                      {leave.student ? `${leave.student.name} (${leave.student.email})` : 'Unknown'}
+                      {getApplicantDisplay(leave)}
                     </td>
                     <td className="border p-3 truncate max-w-xs" title={leave.reason}>
                       {leave.reason}
@@ -308,7 +335,7 @@ function ManageLeaves() {
               <button
                 onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={page === totalPages}
-                className="bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 disabled:bg-gray-100 transition-colors"
+                className="bg-gray-200 text-gray-700 px-7 py-1 rounded hover:bg-gray-300 disabled:bg-gray-100 transition-colors"
               >
                 Next
               </button>

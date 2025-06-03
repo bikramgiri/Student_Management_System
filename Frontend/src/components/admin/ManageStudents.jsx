@@ -10,8 +10,8 @@ function ManageStudents() {
   const [studentData, setStudentData] = useState({
     user: '',
     enrollmentNumber: '',
-    class: '10th',
-    section: 'A',
+    class: '',
+    section: '',
   });
   const [message, setMessage] = useState('');
 

@@ -4,8 +4,8 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const submitLeave = createAsyncThunk(
-  'leaves/submitLeave',
+export const submitStudentLeave = createAsyncThunk(
+  'leaves/submitStudentLeave',
   async (leaveData, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
@@ -14,6 +14,23 @@ export const submitLeave = createAsyncThunk(
       });
       return response.data.leave;
     } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
+    }
+  }
+);
+
+export const submitTeacherLeave = createAsyncThunk(
+  'leaves/submitTeacherLeave',
+  async (leaveData, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const response = await axios.post(`${API_URL}/leaves/teacher`, leaveData, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      console.log('submitTeacherLeave response:', response.data); // Debug log
+      return response.data.leave;
+    } catch (error) {
+      console.error('submitTeacherLeave error:', error.response?.data);
       return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
     }
   }
@@ -74,15 +91,29 @@ const leaveSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(submitLeave.pending, (state) => {
+      .addCase(submitStudentLeave.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(submitLeave.fulfilled, (state, action) => {
+      .addCase(submitStudentLeave.fulfilled, (state, action) => {
         state.loading = false;
         state.leaves.push(action.payload);
       })
-      .addCase(submitLeave.rejected, (state, action) => {
+      .addCase(submitStudentLeave.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Add cases for submitTeacherLeave
+      .addCase(submitTeacherLeave.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(submitTeacherLeave.fulfilled, (state, action) => {
+        state.loading = false;
+        state.leaves.push(action.payload);
+      })
+      .addCase(submitTeacherLeave.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

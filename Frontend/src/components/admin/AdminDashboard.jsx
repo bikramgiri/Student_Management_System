@@ -7,14 +7,14 @@ import { fetchStudents } from '../../redux/studentSlice';
 import { fetchTeachers } from '../../redux/teacherSlice';
 import { fetchCourses } from '../../redux/courseSlice';
 import { fetchFeedbacks } from '../../redux/feedbackSlice';
-import { fetchAllLeaves } from '../../redux/leaveSlice'; // Add this import
+import { fetchAllLeaves } from '../../redux/leaveSlice'; 
 
 function AdminDashboard() {
   const dispatch = useDispatch();
   const { students, loading: studentsLoading, error: studentsError } = useSelector((state) => state.students);
   const { teachers, loading: teachersLoading, error: teachersError } = useSelector((state) => state.teachers);
   const { courses, loading: coursesLoading, error: coursesError } = useSelector((state) => state.courses);
-  const { feedbacks, loading: feedbackLoading, error: feedbackError } = useSelector((state) => state.feedback);
+  // const { feedbacks, loading: feedbackLoading, error: feedbackError } = useSelector((state) => state.feedback);
   const { leaves, loading: leavesLoading, error: leavesError } = useSelector((state) => state.leaves);
   const [message, setMessage] = useState('');
 
@@ -29,9 +29,9 @@ function AdminDashboard() {
   const summaryData = [
     { name: 'Students', count: students.length },
     { name: 'Teachers', count: teachers.length },
-    { name: 'Courses', count: courses.length },
-    { name: 'Pending Feedbacks', count: feedbacks.filter(fb => fb.status === 'Pending').length },
-    { name: 'Pending Leaves', count: leaves.filter(leave => leave.status === 'Pending').length },
+    { name: 'Subjects', count: courses.length },
+    // { name: 'Pending Feedbacks', count: feedbacks.filter(fb => fb.status === 'Pending').length },
+    { name: 'Pending Leave', count: leaves.filter(leave => leave.status === 'Pending').length },
   ];
 
   const handleRefresh = () => {
@@ -51,8 +51,8 @@ function AdminDashboard() {
     });
   };
 
-  const isLoading = studentsLoading || teachersLoading || coursesLoading || feedbackLoading || leavesLoading;
-  const hasError = studentsError || teachersError || coursesError || feedbackError || leavesError;
+  const isLoading = studentsLoading || teachersLoading || coursesLoading || leavesLoading;  // feedbackLoading || 
+  const hasError = studentsError || teachersError || coursesError || leavesError; //feedbackError ||
 
   return (
     <div className="p-6">
@@ -61,8 +61,8 @@ function AdminDashboard() {
       <div className="space-y-2 mb-6">
         <Link to="/admin/manage-students" className="text-blue-500 underline block hover:text-blue-700">Manage Students</Link>
         <Link to="/admin/manage-teachers" className="text-blue-500 underline block hover:text-blue-700">Manage Teachers</Link>
-        <Link to="/admin/manage-courses" className="text-blue-500 underline block hover:text-blue-700">Manage Courses</Link>
-        <Link to="/admin/manage-feedbacks" className="text-blue-500 underline block hover:text-blue-700">Manage Feedbacks</Link>
+        <Link to="/admin/manage-courses" className="text-blue-500 underline block hover:text-blue-700">Manage Subjects</Link>
+        {/* <Link to="/admin/manage-feedbacks" className="text-blue-500 underline block hover:text-blue-700">Manage Feedbacks</Link> */}
         <Link to="/admin/manage-leaves" className="text-blue-500 underline block hover:text-blue-700">Manage Leaves</Link>
       </div>
 
@@ -84,7 +84,7 @@ function AdminDashboard() {
           <p className="text-gray-500">Loading summary data...</p>
         ) : hasError ? (
           <p className="text-red-500">
-            {studentsError || teachersError || coursesError || feedbackError || leavesError}
+            {studentsError || teachersError || coursesError || leavesError}  // || feedbackError 
           </p>
         ) : (
           <BarChart width={600} height={300} data={summaryData} className="mx-auto">

@@ -1,7 +1,7 @@
 // src/components/student/StudentDashboard.jsx
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { submitLeave, fetchLeaves } from '../../redux/leaveSlice';
+import { submitStudentLeave, fetchLeaves } from '../../redux/leaveSlice';
 import { fetchResults } from '../../redux/resultSlice';
 import { fetchAttendance } from '../../redux/attendanceSlice';
 
@@ -13,7 +13,7 @@ function StudentDashboard() {
   const { leaves, loading: leavesLoading, error: leavesError } = useSelector((state) => state.leaves);
 
   const [activeTab, setActiveTab] = useState('attendance');
-  const ADMIN_ID = 'your-admin-id-here'; // Replace with a real admin ID from your database
+  const ADMIN_ID = '67f14f9cafe71b4e73385c28'; // Replace with a real admin ID from your database
 
   useEffect(() => {
     console.log('StudentDashboard mounted');
@@ -93,15 +93,18 @@ function StudentDashboard() {
 
     const handleSubmit = useCallback((e) => {
       e.preventDefault();
-      console.log('Submitting leave:', leaveForm);
-      dispatch(submitLeave({ ...leaveForm, studentId })).then((result) => {
+      const payload = { ...leaveForm, studentId };
+      console.log('Submitting leave payload:', payload);  
+      
+      dispatch(submitStudentLeave({ ...leaveForm, studentId })).then((result) => {
         if (result.meta.requestStatus === 'fulfilled') {
           setMessage('Leave application submitted successfully!');
           setLeaveForm({ date: '', reason: '', admin: ADMIN_ID });
           dispatch(fetchLeaves());
         } else {
-          setMessage(result.payload);
-        }
+          console.error('Submit leave error:', result.payload); // Log for debugging
+          setMessage(`Failed to submit leave: ${result.payload}`);
+          }
         setTimeout(() => setMessage(''), 3000);
       });
     }, [dispatch, leaveForm, studentId]);
@@ -204,76 +207,76 @@ function StudentDashboard() {
     );
   });
 
-  const Chat = memo(({ userId }) => {
-    const [chat, setChat] = useState({ recipient: '', messages: [], input: '' });
+  // const Chat = memo(({ userId }) => {
+  //   const [chat, setChat] = useState({ recipient: '', messages: [], input: '' });
 
-    const handleChatChange = useCallback((e) => {
-      console.log(`Chat handleChange: input=${e.target.value}`);
-      setChat((prev) => ({ ...prev, input: e.target.value }));
-    }, []);
+  //   const handleChatChange = useCallback((e) => {
+  //     console.log(`Chat handleChange: input=${e.target.value}`);
+  //     setChat((prev) => ({ ...prev, input: e.target.value }));
+  //   }, []);
 
-    const handleChatSubmit = useCallback((e) => {
-      e.preventDefault();
-      if (chat.input.trim() && chat.recipient) {
-        setChat((prev) => ({
-          ...prev,
-          messages: [...prev.messages, { sender: userId, text: prev.input, timestamp: new Date() }],
-          input: '',
-        }));
-        console.log(`Message to ${chat.recipient}: ${chat.input}`);
-      }
-    }, [chat.input, chat.recipient, userId]);
+  //   const handleChatSubmit = useCallback((e) => {
+  //     e.preventDefault();
+  //     if (chat.input.trim() && chat.recipient) {
+  //       setChat((prev) => ({
+  //         ...prev,
+  //         messages: [...prev.messages, { sender: userId, text: prev.input, timestamp: new Date() }],
+  //         input: '',
+  //       }));
+  //       console.log(`Message to ${chat.recipient}: ${chat.input}`);
+  //     }
+  //   }, [chat.input, chat.recipient, userId]);
 
-    console.log('Chat rendered');
-    return (
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-2">Chat</h2>
-        <select
-          value={chat.recipient}
-          onChange={(e) => setChat((prev) => ({ ...prev, recipient: e.target.value, messages: [] }))}
-          className="w-full border p-2 rounded mb-4"
-        >
-          <option value="">Select Recipient</option>
-          <option value={ADMIN_ID}>Admin</option>
-        </select>
-        {chat.recipient ? (
-          <>
-            <div className="h-64 overflow-y-auto border p-2 rounded mb-4">
-              {chat.messages.map((msg, index) => (
-                <div key={index} className={`mb-2 ${msg.sender === userId ? 'text-right' : 'text-left'}`}>
-                  <span className={`inline-block p-2 rounded ${msg.sender === userId ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                    {msg.text}
-                  </span>
-                  <p className="text-xs text-gray-500">{new Date(msg.timestamp).toLocaleTimeString()}</p>
-                </div>
-              ))}
-            </div>
-            <form onSubmit={handleChatSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={chat.input}
-                onChange={handleChatChange}
-                placeholder="Type a message..."
-                className="flex-grow border p-2 rounded"
-              />
-              <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-                Send
-              </button>
-            </form>
-          </>
-        ) : (
-          <p>Select a recipient to start chatting.</p>
-        )}
-      </div>
-    );
-  });
+  //   console.log('Chat rendered');
+  //   return (
+  //     <div className="bg-white p-4 rounded-lg shadow">
+  //       <h2 className="text-xl font-semibold mb-2">Chat</h2>
+  //       <select
+  //         value={chat.recipient}
+  //         onChange={(e) => setChat((prev) => ({ ...prev, recipient: e.target.value, messages: [] }))}
+  //         className="w-full border p-2 rounded mb-4"
+  //       >
+  //         <option value="">Select Recipient</option>
+  //         <option value={ADMIN_ID}>Admin</option>
+  //       </select>
+  //       {chat.recipient ? (
+  //         <>
+  //           <div className="h-64 overflow-y-auto border p-2 rounded mb-4">
+  //             {chat.messages.map((msg, index) => (
+  //               <div key={index} className={`mb-2 ${msg.sender === userId ? 'text-right' : 'text-left'}`}>
+  //                 <span className={`inline-block p-2 rounded ${msg.sender === userId ? 'bg-blue-100' : 'bg-gray-100'}`}>
+  //                   {msg.text}
+  //                 </span>
+  //                 <p className="text-xs text-gray-500">{new Date(msg.timestamp).toLocaleTimeString()}</p>
+  //               </div>
+  //             ))}
+  //           </div>
+  //           <form onSubmit={handleChatSubmit} className="flex gap-2">
+  //             <input
+  //               type="text"
+  //               value={chat.input}
+  //               onChange={handleChatChange}
+  //               placeholder="Type a message..."
+  //               className="flex-grow border p-2 rounded"
+  //             />
+  //             <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+  //               Send
+  //             </button>
+  //           </form>
+  //         </>
+  //       ) : (
+  //         <p>Select a recipient to start chatting.</p>
+  //       )}
+  //     </div>
+  //   );
+  // });
 
   console.log('StudentDashboard rendered');
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Welcome, {user.name}</h1>
       <div className="flex space-x-4 mb-6 border-b">
-        {['attendance', 'results', 'leave', 'chat'].map((tab) => (
+        {['attendance', 'results', 'leave'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -286,7 +289,6 @@ function StudentDashboard() {
       {activeTab === 'attendance' && <AttendanceDisplay />}
       {activeTab === 'results' && <ResultsDisplay />}
       {activeTab === 'leave' && <LeaveApplication leaves={leaves} leavesLoading={leavesLoading} leavesError={leavesError} />}
-      {activeTab === 'chat' && <Chat userId={user._id} />}
     </div>
   );
 }
