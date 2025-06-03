@@ -30,10 +30,9 @@ function Navbar() {
           </>
         ) : (
           <>
-            <Link to="/login" className="mr-4">Login</Link>
-            <Link to="/signup" className="bg-blue-500 px-3 py-1 rounded">
-              Sign Up
-            </Link>
+            <Link to="/" className="font-bold text-xl px-3 py-1 mr-4">Home</Link>
+            <Link to="/login" className="font-bold text-xl px-3 py-1 mr-4">Login</Link>
+            <Link to="/signup" className="font-bold text-xl px-3 py-1 mr-4">Sign Up</Link>
           </>
         )}
       </div>

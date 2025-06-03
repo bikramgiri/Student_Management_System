@@ -24,7 +24,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="max-w-md mx-auto p-4 bg-white rounded shadow flex items-center justify-center mt-35">
       <form onSubmit={handleLogin} className="bg-white p-6 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl font-bold mb-4">Login</h2>
         
@@ -32,7 +32,7 @@ const Login = () => {
 
         <input
           type="email"
-          placeholder="Email"
+          placeholder="Enter your email"
           className="w-full p-2 mb-3 border rounded"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -40,7 +40,7 @@ const Login = () => {
         />
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Enter yourpassword"
           className="w-full p-2 mb-3 border rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -48,7 +48,7 @@ const Login = () => {
         />
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+          className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
           disabled={loading}
         >
           {loading ? 'Logging in...' : 'Login'}

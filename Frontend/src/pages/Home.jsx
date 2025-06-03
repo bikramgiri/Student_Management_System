@@ -44,7 +44,7 @@ const Home = () => {
   if (loading) return <div className="text-center mt-10">Loading...</div>;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+    <div className="flex flex-col items-center justify-center bg-gray-100 p-6 mt-35">
       <h1 className="text-4xl font-bold text-gray-800 mb-6">Welcome to the Student Management System</h1>
       {user ? (
         <div className="text-center">
