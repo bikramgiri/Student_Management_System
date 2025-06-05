@@ -66,7 +66,7 @@ const Home = () => {
           </p>
           <div className="flex space-x-6">
             <button
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-600"
+              className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-600"
               onClick={() => navigate("/login")}
             >
               Login
