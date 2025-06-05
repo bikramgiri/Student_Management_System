@@ -11,8 +11,10 @@ async function connectToDatabase() {
     }
 
     await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      // useNewUrlParser: true,
+      // useUnifiedTopology: true,
+      // Or
+      serverSelectionTimeoutMS: 5000, // Optional: Timeout for server selection
     });
     console.log('MongoDB connected successfully');
   } catch (err) {
