@@ -3,137 +3,109 @@ const User = require('../models/User');
 
 exports.getTeachers = async (req, res) => {
   try {
-    const { role } = req.user;
-    if (role === 'Student') {
-      return res.status(403).json({ message: 'Forbidden: Students cannot view teacher records' });
-    }
     const teachers = await Teacher.find().populate('user', 'name email');
     res.status(200).json({ teachers });
   } catch (error) {
-    console.error('Error fetching teachers:', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// New endpoint for students to fetch available teachers
+exports.getPotentialTeachers = async (req, res) => {
+  try {
+    const teachers = await Teacher.find().select('user');
+    const assignedUserIds = teachers.map(t => t.user.toString());
+    const potentialTeachers = await User.find({
+      _id: { $nin: assignedUserIds },
+      role: 'Teacher',
+    }).select('name email _id');
+    res.status(200).json({ potentialTeachers });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 exports.getAvailableTeachers = async (req, res) => {
   try {
-    // No role restriction; accessible to authenticated students
-    const teachers = await Teacher.find()
-      .populate('user', 'name email')
-      .select('user subject _id'); // Limit fields to what's needed
-    res.status(200).json({ teachers });
+    const teachers = await Teacher.find().select('user');
+    const assignedUserIds = teachers.map(t => t.user.toString());
+    const availableTeachers = await User.find({
+      _id: { $nin: assignedUserIds },
+      role: { $ne: 'Admin' }, // Exclude admins
+    }).select('name email _id');
+    res.status(200).json({ teachers: availableTeachers });
   } catch (error) {
-    console.error('Error fetching available teachers:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 exports.addTeacher = async (req, res) => {
   try {
-    const { role } = req.user;
-    if (role !== 'Admin') {
-      return res.status(403).json({ message: 'Forbidden: Only Admin can add teachers' });
-    }
     const { user, subject, qualification, experience } = req.body;
     if (!user || !subject || !qualification) {
       return res.status(400).json({ message: 'User, subject, and qualification are required' });
     }
-
-    const userDoc = await User.findById(user);
-    if (!userDoc || userDoc.role !== 'Teacher') {
-      return res.status(400).json({ message: 'Invalid user or user is not a teacher' });
+    if (experience && (isNaN(Number(experience)) || Number(experience) < 0)) {
+      return res.status(400).json({ message: 'Experience must be a non-negative number' });
     }
 
-    const existingTeacher = await Teacher.findOne({ user });
-    if (existingTeacher) {
-      return res.status(400).json({ message: 'This user is already assigned as a teacher' });
-    }
-
-    const teacherData = { user, subject, qualification };
-    if (experience !== undefined) {
-      if (typeof experience !== 'number' || isNaN(experience) || experience < 0) {
-        return res.status(400).json({ message: 'Experience must be a non-negative number' });
-      }
-      teacherData.experience = experience;
-    }
-
-    const teacher = new Teacher(teacherData);
+    const teacher = new Teacher({
+      user,
+      subject,
+      qualification,
+      experience: Number(experience) || 0,
+    });
     await teacher.save();
-    await teacher.populate('user', 'name email');
-    res.status(201).json({ message: 'Teacher added successfully', teacher });
+    const populatedTeacher = await Teacher.findById(teacher._id).populate('user', 'name email');
+    res.status(201).json({ message: 'Teacher added successfully', teacher: populatedTeacher });
   } catch (error) {
-    console.error('Error adding teacher:', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 exports.updateTeacher = async (req, res) => {
   try {
-    const { role } = req.user;
-    if (role !== 'Admin') {
-      return res.status(403).json({ message: 'Forbidden: Only Admin can update teachers' });
-    }
     const { id } = req.params;
-    const { user, subject, qualification, experience } = req.body;
+    const { userId, name, email, password, subject, qualification, experience } = req.body;
+    if (!subject || !qualification) {
+      return res.status(400).json({ message: 'Subject and qualification are required' });
+    }
+    if (experience && (isNaN(Number(experience)) || Number(experience) < 0)) {
+      return res.status(400).json({ message: 'Experience must be a non-negative number' });
+    }
 
-    const teacher = await Teacher.findById(id);
-    if (!teacher) {
+    // Update User data
+    if (userId && (name || email || password)) {
+      const updateUserData = {};
+      if (name) updateUserData.name = name;
+      if (email) updateUserData.email = email;
+      if (password) updateUserData.password = password; // Assumes pre-save hook hashes password
+      await User.findByIdAndUpdate(userId, updateUserData, { new: true, runValidators: true });
+    }
+
+    // Update Teacher data
+    const updatedTeacher = await Teacher.findByIdAndUpdate(
+      id,
+      { subject, qualification, experience: Number(experience) || 0 },
+      { new: true, runValidators: true }
+    ).populate('user', 'name email');
+    if (!updatedTeacher) {
       return res.status(404).json({ message: 'Teacher not found' });
     }
-
-    if (user && user !== teacher.user.toString()) {
-      const userDoc = await User.findById(user);
-      if (!userDoc || userDoc.role !== 'Teacher') {
-        return res.status(400).json({ message: 'Selected user must have Teacher role' });
-      }
-      const existingTeacher = await Teacher.findOne({ user });
-      if (existingTeacher && existingTeacher._id.toString() !== id) {
-        return res.status(400).json({ message: 'This user is already assigned as a teacher' });
-      }
-      teacher.user = user;
-    }
-
-    teacher.subject = subject || teacher.subject;
-    teacher.qualification = qualification || teacher.qualification;
-    teacher.experience = experience || teacher.experience;
-    await teacher.save();
-    await teacher.populate('user', 'name email role');
-    res.status(200).json({ teacher });
+    res.status(200).json({ message: 'Teacher updated successfully', teacher: updatedTeacher });
   } catch (error) {
-    console.error('Error updating teacher:', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 exports.deleteTeacher = async (req, res) => {
   try {
-    const { role } = req.user;
-    if (role !== 'Admin') {
-      return res.status(403).json({ message: 'Forbidden: Only Admin can delete teachers' });
-    }
     const { id } = req.params;
-    const teacher = await Teacher.findByIdAndDelete(id);
-    if (!teacher) {
+    const deletedTeacher = await Teacher.findByIdAndDelete(id);
+    if (!deletedTeacher) {
       return res.status(404).json({ message: 'Teacher not found' });
     }
     res.status(200).json({ message: 'Teacher deleted successfully' });
   } catch (error) {
-    console.error('Error deleting teacher:', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-exports.getPotentialTeachers = async (req, res) => {
-  try {
-    const { role } = req.user;
-    if (role !== 'Admin') {
-      return res.status(403).json({ message: 'Forbidden: Only Admin can fetch potential teachers' });
-    }
-    const potentialTeachers = await User.find({ role: 'Teacher' }).select('_id name email');
-    res.status(200).json({ potentialTeachers });
-  } catch (error) {
-    console.error('Error fetching potential teachers:', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

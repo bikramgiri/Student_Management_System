@@ -12,7 +12,6 @@ const courseRoutes = require('./routes/courseRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes'); // Add this
 const resultRoutes = require('./routes/resultRoutes'); // Add this
 const leaveRoutes = require('./routes/leaveRoutes'); // Add this
-const feedbackRoutes = require('./routes/feedbackRoutes'); // Add this
 
 const app = express();
 
@@ -38,7 +37,8 @@ app.get('/', (req, res) => {
       attendance: "/attendance",
       results: "/results",
       leaves: "/leaves",
-      feedback: "/feedback"
+      attendanceSummary: "/api/attendance/summary",
+      resultSummary: "/api/results/average-marks"
     },
   });
 });
@@ -51,7 +51,8 @@ app.use('/courses', authMiddleware, courseRoutes);   // Protected
 app.use('/attendance', authMiddleware, attendanceRoutes); // Protected
 app.use('/results', authMiddleware, resultRoutes);       // Protected
 app.use('/leaves', authMiddleware, leaveRoutes);         // Protected
-app.use('/feedback', authMiddleware, feedbackRoutes);    // Protected
+app.use('/api/attendance', authMiddleware, attendanceRoutes); 
+app.use('/api/results', authMiddleware, resultRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

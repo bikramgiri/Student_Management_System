@@ -19,8 +19,8 @@ exports.signup = async (req, res) => {
 
     const token = jwt.sign(
       { _id: newUser._id, role: newUser.role },
-      process.env.JWT_SECRET || 'your-secret-key', // Fallback for development
-      { expiresIn: '1d' } // Extended to 1 day
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '1d' }
     );
 
     res.status(201).json({
@@ -72,5 +72,63 @@ exports.login = async (req, res) => {
   } catch (error) {
     console.error('Login Error:', error.message);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+};
+
+exports.fetchAdminProfile = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const user = await User.findById(_id).select('name email role');
+    if (!user || user.role !== 'Admin') {
+      return res.status(404).json({ message: 'Admin profile not found' });
+    }
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error('Error fetching admin profile:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.updateAdminProfile = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { name, email } = req.body;
+
+    // Validate input
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Name and email are required' });
+    }
+
+    // Check if email is valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      { name, email },
+      { new: true, runValidators: true }
+    ).select('name email role');
+
+    if (!updatedUser || updatedUser.role !== 'Admin') {
+      return res.status(404).json({ message: 'Admin profile not found' });
+    }
+
+    // Generate new token with updated data
+    const token = jwt.sign(
+      { _id: updatedUser._id, email: updatedUser.email, role: updatedUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(200).json({ message: 'Profile updated successfully', user: updatedUser, token });
+  } catch (error) {
+    console.error('Error updating admin profile:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Validation error', details: error.errors });
+    }
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
