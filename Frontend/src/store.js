@@ -8,6 +8,8 @@ import attendanceReducer from './redux/attendanceSlice';
 import resultReducer from './redux/resultSlice';
 import leaveReducer from './redux/leaveSlice';
 import feedbackReducer from './redux/feedbackSlice';
+import attendanceSummaryReducer from './redux/attendanceSummarySlice';
+import resultsSummaryReducer from './redux/resultsSummarySlice';
 
 const store = configureStore({
   reducer: {
@@ -19,6 +21,8 @@ const store = configureStore({
     results: resultReducer,
     leaves: leaveReducer,
     feedback: feedbackReducer,
+    attendanceSummary: attendanceSummaryReducer,
+    resultsSummary: resultsSummaryReducer,
   },
 });
 

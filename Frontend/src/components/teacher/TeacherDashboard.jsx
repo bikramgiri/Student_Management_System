@@ -7,8 +7,7 @@ import {
   clearError as clearAttendanceError,
 } from '../../redux/attendanceSlice';
 import { submitResult, clearError as clearResultError } from '../../redux/resultSlice';
-import { submitTeacherLeave } from '../../redux/leaveSlice';  // submitStudentLeave is not used here
-// import { submitFeedback } from '../../redux/feedbackSlice';
+import { submitTeacherLeave } from '../../redux/leaveSlice';
 
 // Component for marking attendance
 function AttendanceMarking() {
@@ -26,8 +25,11 @@ function AttendanceMarking() {
   };
 
   const handleSubmitAttendance = () => {
-    const attendanceData = { date: new Date().toISOString(), records: attendance };
+    // Fix typo: Use toLocaleDateString() instead of toLocalDataString()
+    const attendanceData = { date: new Date().toLocaleDateString(), records: attendance };
+    console.log('Submitting Attendance Data:', attendanceData); // Debug log
     dispatch(submitAttendance(attendanceData)).then((result) => {
+      console.log('Attendance Submission Result:', result); // Debug log
       if (result.meta.requestStatus === 'fulfilled') {
         setMessage('Attendance submitted successfully!');
         setAttendance({});
@@ -35,6 +37,9 @@ function AttendanceMarking() {
       } else {
         setMessage(result.payload || 'Failed to submit attendance');
       }
+    }).catch((err) => {
+      console.error('Error submitting attendance:', err); // Catch unhandled errors
+      setMessage('An error occurred while submitting attendance');
     });
   };
 
@@ -115,6 +120,7 @@ function ResultsEntry() {
   const handleSubmitResults = (e) => {
     e.preventDefault();
     dispatch(submitResult(resultData)).then((result) => {
+      console.log('Result Submission Result:', result);
       if (result.meta.requestStatus === 'fulfilled') {
         setMessage('Results submitted successfully!');
         setResultData({ studentId: '', subject: '', marks: '' });
@@ -227,53 +233,53 @@ function LeaveApplicationFormTeacher() {
   };
 
   const handleSubmitLeave = (e) => {
-  e.preventDefault();
-  console.log('Submitting formData:', JSON.stringify(formData, null, 2)); // Enhanced logging
-  const { date, reason } = formData;
-  const parsedDate = new Date(date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    e.preventDefault();
+    console.log('Submitting formData:', JSON.stringify(formData, null, 2)); // Enhanced logging
+    const { date, reason } = formData;
+    const parsedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  if (!date) {
+    if (!date) {
       setMessage('Date is required');
       return;
     }
 
-  if (isNaN(parsedDate.getTime())) {
-    setMessage('Invalid date format');
-    return;
-  }
-  if (parsedDate < today) {
-    setMessage('Leave date cannot be in the past');
-    return;
-  }
-  if (!reason ||reason.trim().length === 0) {
-    setMessage('Reason is required');
-    return;
-  }
-  if (reason.trim().length > 500) {
-    setMessage('Reason cannot exceed 500 characters');
-    return;
-  }
-
-  dispatch(submitTeacherLeave(formData)).then((result) => {
-    console.log('submitTeacherLeave result:', JSON.stringify(result, null, 2)); // Debug log
-    if (result.meta.requestStatus === 'fulfilled') {
-      const leave  = result.payload;
-      if (!leave) {
-      console.error('No leave object in payload:', result.payload);
-      setMessage('Failed to submit leave: Invalid response');
+    if (isNaN(parsedDate.getTime())) {
+      setMessage('Invalid date format');
       return;
     }
-      setMessage(`Leave submitted by ${leave.teacher?.name || 'You'}! Status: ${leave.status}`);
-      setFormData({ date: '', reason: '' });
-      setTimeout(() => setMessage(''), 3000);
-    } else {
-      console.error('Submit leave error:', JSON.stringify(result.payload, null, 2));
-      setMessage(result.payload?.message || 'Failed to submit leave');
+    if (parsedDate < today) {
+      setMessage('Leave date cannot be in the past');
+      return;
     }
-  });
-};
+    if (!reason || reason.trim().length === 0) {
+      setMessage('Reason is required');
+      return;
+    }
+    if (reason.trim().length > 500) {
+      setMessage('Reason cannot exceed 500 characters');
+      return;
+    }
+
+    dispatch(submitTeacherLeave(formData)).then((result) => {
+      console.log('submitTeacherLeave result:', JSON.stringify(result, null, 2)); // Debug log
+      if (result.meta.requestStatus === 'fulfilled') {
+        const leave = result.payload;
+        if (!leave) {
+          console.error('No leave object in payload:', result.payload);
+          setMessage('Failed to submit leave: Invalid response');
+          return;
+        }
+        setMessage(`Leave submitted by ${leave.teacher?.name || 'You'}! Status: ${leave.status}`);
+        setFormData({ date: '', reason: '' });
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        console.error('Submit leave error:', JSON.stringify(result.payload, null, 2));
+        setMessage(result.payload?.message || 'Failed to submit leave');
+      }
+    });
+  };
 
   return (
     <div>
@@ -314,63 +320,12 @@ function LeaveApplicationFormTeacher() {
   );
 }
 
-// Component for sending feedback
-// function FeedbackFormTeacher() {
-//   const dispatch = useDispatch();
-//   const { loading, error } = useSelector((state) => state.feedback);
-//   const [feedback, setFeedback] = useState('');
-//   const [responseMsg, setResponseMsg] = useState('');
-
-//   const handleSubmitFeedback = (e) => {
-//     e.preventDefault();
-//     dispatch(submitFeedback({ feedback })).then((result) => {
-//       if (result.meta.requestStatus === 'fulfilled') {
-//         setResponseMsg(`Feedback submitted successfully! Status: ${result.payload.feedback.status}`);
-//         setFeedback('');
-//         setTimeout(() => setResponseMsg(''), 3000);
-//       } else {
-//         setResponseMsg(result.payload || 'Failed to submit feedback');
-//       }
-//     });
-//   };
-
-//   return (
-//     <div>
-//       <h2 className="text-xl font-semibold mb-2">Send Feedback to HOD</h2>
-//       {responseMsg && (
-//         <p className={responseMsg.includes('successfully') ? 'text-green-600 mb-2' : 'text-red-500 mb-2'}>
-//           {responseMsg}
-//         </p>
-//       )}
-//       {loading && <p className="text-gray-500">Submitting...</p>}
-//       {error && <p className="text-red-500">{error}</p>}
-//       <form onSubmit={handleSubmitFeedback} className="flex flex-col gap-2">
-//         <textarea
-//           value={feedback}
-//           onChange={(e) => setFeedback(e.target.value)}
-//           placeholder="Enter your feedback here..."
-//           className="border p-2 rounded h-24"
-//           required
-//         />
-//         <button
-//           type="submit"
-//           className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-//           disabled={loading}
-//         >
-//           {loading ? 'Submitting...' : 'Submit Feedback'}
-//         </button>
-//       </form>
-//     </div>
-//   );
-// }
-
 function TeacherDashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, token } = useSelector((state) => state.auth);
   const { loading: attendanceLoading } = useSelector((state) => state.attendance);
-  
-  // Redirect if not a teacher
+
   useEffect(() => {
     console.log('Auth state on mount:', { token, user });
     if (!token || !user || user.role !== 'Teacher') {
@@ -384,7 +339,7 @@ function TeacherDashboard() {
     dispatch(fetchStudentsForAttendance());
   };
 
-  if (!token || !user || user.role !== 'Teacher') return null; // Prevent render until redirect
+  if (!token || !user || user.role !== 'Teacher') return null;
 
   return (
     <div className="p-6">
@@ -398,22 +353,18 @@ function TeacherDashboard() {
           {attendanceLoading ? 'Refreshing...' : 'Refresh Students'}
         </button>
       </div>
-      
+
       <div className="mt-4 border p-4 rounded shadow bg-white">
         <AttendanceMarking />
       </div>
-      
+
       <div className="mt-4 border p-4 rounded shadow bg-white">
         <ResultsEntry />
       </div>
-      
+
       <div className="mt-4 border p-4 rounded shadow bg-white">
         <LeaveApplicationFormTeacher />
       </div>
-      
-      {/* <div className="mt-4 border p-4 rounded shadow bg-white">
-        <FeedbackFormTeacher />
-      </div> */}
     </div>
   );
 }

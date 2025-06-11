@@ -56,6 +56,7 @@ const resultSlice = createSlice({
       .addCase(submitResult.fulfilled, (state, action) => {
         state.loading = false;
         state.results.push(action.payload.result); // Add new result to state
+        console.log('Result saved:', action.payload);
       })
       .addCase(submitResult.rejected, (state, action) => {
         state.loading = false;

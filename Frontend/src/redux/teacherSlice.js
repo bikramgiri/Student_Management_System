@@ -63,6 +63,29 @@ export const deleteTeacher = createAsyncThunk(
   }
 );
 
+export const updateTeacher = createAsyncThunk(
+  'teachers/updateTeacher',
+  async (teacherData, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const response = await axios.put(`${API_URL}/teachers/${teacherData._id}`, {
+        userId: teacherData.userId,
+        name: teacherData.name,
+        email: teacherData.email,
+        password: teacherData.password,
+        subject: teacherData.subject,
+        qualification: teacherData.qualification,
+        experience: teacherData.experience,
+      }, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return response.data.teacher;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update teacher');
+    }
+  }
+);
+
 const teacherSlice = createSlice({
   name: 'teachers',
   initialState: {
@@ -120,6 +143,19 @@ const teacherSlice = createSlice({
         );
       })
       .addCase(deleteTeacher.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateTeacher.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateTeacher.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.teachers.findIndex(teacher => teacher._id === action.payload._id);
+        if (index !== -1) state.teachers[index] = action.payload;
+      })
+      .addCase(updateTeacher.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

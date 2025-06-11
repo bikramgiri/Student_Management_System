@@ -85,6 +85,7 @@ const attendanceSlice = createSlice({
       .addCase(fetchStudentsForAttendance.fulfilled, (state, action) => {
         state.loading = false;
         state.students = action.payload;
+        console.log('Attendance saved:', action.payload)
       })
       .addCase(fetchStudentsForAttendance.rejected, (state, action) => {
         state.loading = false;
