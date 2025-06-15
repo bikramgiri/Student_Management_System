@@ -11,7 +11,6 @@ const userSchema = new mongoose.Schema({
   email: { 
     type: String, 
     required: [true, 'Email is required'], 
-    // unique: true,
     lowercase: true,
     trim: true,
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
@@ -31,15 +30,16 @@ const userSchema = new mongoose.Schema({
     default: 'Student',
     required: [true, 'Role is required'],
   },
+  address: { type: String, trim: true }, // Added address
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
 });
 
-// Indexes for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
+
+// Add compound index on email and role
+userSchema.index({ email: 1, role: 1 }, { unique: true });
 
 // Virtuals for related profiles
 userSchema.virtual('studentProfile', {

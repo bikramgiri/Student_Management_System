@@ -1,4 +1,3 @@
-// controllers/studentController.js
 const Student = require('../models/Student');
 const User = require('../models/User');
 
@@ -10,13 +9,11 @@ exports.getStudents = async (req, res) => {
     }
 
     if (role === 'Teacher') {
-      // Teachers get flat User data for attendance/results
-      const students = await User.find({ role: 'Student' }).select('_id name email');
+      const students = await User.find({ role: 'Student' }).select('_id name email address');
       return res.status(200).json({ students });
     }
 
-    // Admins get full Student records
-    const students = await Student.find().populate('user', 'name email');
+    const students = await Student.find().populate('user', 'name email address');
     res.status(200).json({ students });
   } catch (error) {
     console.error('Error fetching students:', error.message);
@@ -32,34 +29,36 @@ exports.addStudent = async (req, res) => {
     }
 
     const { user, enrollmentNumber, class: className, section } = req.body;
+    console.log('Received add student request with body:', JSON.stringify(req.body, null, 2)); // Debug log
     if (!user || !enrollmentNumber) {
-      return res.status(400).json({ message: 'User and enrollment number are required' });
+      console.log('Validation failed - user:', user, 'enrollmentNumber:', enrollmentNumber); // Debug log
+      return res.status(400).json({ message: 'User ID and enrollment number are required' });
     }
 
-     // Check if the user already exists as a student
-    const existingStudent = await Student.findOne({ user });
-    if (existingStudent) {
-      return res.status(400).json({ message: 'This student is already enrolled in a class' });
-    }
-
-    // Validate user exists and has role 'Student'
+    // Optional: Validate that the user exists and has the 'Student' role
     const userDoc = await User.findById(user);
     if (!userDoc || userDoc.role !== 'Student') {
-      return res.status(400).json({ message: 'Invalid user or user is not a student' });
+      return res.status(400).json({ message: 'Invalid user ID or user is not a student' });
     }
 
-    const student = new Student({ user, enrollmentNumber, class: className || '', section: section || '' });
+    const student = new Student({
+      user,
+      enrollmentNumber,
+      class: className || '',
+      section: section || '',
+      address: userDoc.address || '', // Use address from user if available
+    });
     await student.save();
-    await student.populate('user', 'name email');
+    await student.populate('user', 'name email address');
     res.status(201).json({ message: 'Student added successfully', student });
   } catch (error) {
-    console.error('Error adding student:', error.message);
-    // if (error.code === 11000) { // Duplicate key error
-    //   return res.status(400).json({ message: 'This student is already enrolled' });
-    // }
+    console.error('Error adding student:', error.message, 'Stack:', error.stack);
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: 'Validation failed', details: errors });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Enrollment number already exists' });
     }
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
@@ -73,35 +72,27 @@ exports.updateStudent = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { user, enrollmentNumber, class: className, section } = req.body;
+    const { userId, name, email, password, address, enrollmentNumber, class: className, section } = req.body;
 
-    const student = await Student.findById(id);
+    const student = await Student.findById(id).populate('user', 'name email address');
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Validate new user if provided
-    if (user && user !== student.user.toString()) {
-      const userDoc = await User.findById(user);
-      if (!userDoc || userDoc.role !== 'Student') {
-        return res.status(400).json({ message: 'Invalid user or user is not a student' });
-      }
+    if (userId && (name || email || password || address)) {
+      const updateUserData = {};
+      if (name) updateUserData.name = name;
+      if (email) updateUserData.email = email;
+      if (password) updateUserData.password = password;
+      if (address) updateUserData.address = address;
+      await User.findByIdAndUpdate(userId, updateUserData, { new: true, runValidators: true });
     }
 
-    // Check for duplicate enrollmentNumber if changed
-    if (enrollmentNumber && enrollmentNumber !== student.enrollmentNumber) {
-      const existingStudent = await Student.findOne({ enrollmentNumber });
-      if (existingStudent && existingStudent._id.toString() !== id) {
-        return res.status(400).json({ message: 'Enrollment number already exists' });
-      }
-    }
-
-    student.user = user || student.user;
     student.enrollmentNumber = enrollmentNumber || student.enrollmentNumber;
     student.class = className || student.class;
     student.section = section || student.section;
     await student.save();
-    await student.populate('user', 'name email role');
+    await student.populate('user', 'name email address');
     res.status(200).json({ message: 'Student updated successfully', student });
   } catch (error) {
     console.error('Error updating student:', error.message);
@@ -127,9 +118,6 @@ exports.deleteStudent = async (req, res) => {
     res.status(200).json({ message: 'Student deleted successfully' });
   } catch (error) {
     console.error('Error deleting student:', error.message);
-    // if (error.name === 'CastError') {
-    //   return res.status(400).json({ message: 'Invalid student ID' });
-    // }
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -141,7 +129,7 @@ exports.getPotentialStudents = async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: Only Admin can fetch potential students' });
     }
 
-    const potentialStudents = await User.find({ role: 'Student' }).select('_id name email');
+    const potentialStudents = await User.find({ role: 'Student' }).select('_id name email address');
     res.status(200).json({ potentialStudents });
   } catch (error) {
     console.error('Error fetching potential students:', error.message);
