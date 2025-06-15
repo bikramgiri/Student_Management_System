@@ -1,24 +1,24 @@
+// Login.jsx
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-// import { loginUser } from '../redux/authSlice';
 import { loginUser } from '../../redux/authSlice';
-
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState(""); // Add role state
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const result = await dispatch(loginUser({ email, password }));
+    const result = await dispatch(loginUser({ email, password, role })); // Include role
     if (result.meta.requestStatus === 'fulfilled') {
-      const role = result.payload.user.role;
-      if (role === 'Admin') navigate('/admin/dashboard');
-      else if (role === 'Teacher') navigate('/teacher/dashboard');
+      const userRole = result.payload.user.role;
+      if (userRole === 'Admin') navigate('/admin/dashboard');
+      else if (userRole === 'Teacher') navigate('/teacher/dashboard');
       else navigate('/student/dashboard');
     }
   };
@@ -40,12 +40,23 @@ const Login = () => {
         />
         <input
           type="password"
-          placeholder="Enter yourpassword"
+          placeholder="Enter your password"
           className="w-full p-2 mb-3 border rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          className="w-full p-2 mb-3 border rounded"
+          required
+        >
+          <option value="">Select Role</option>
+          <option value="Student">Student</option>
+          <option value="Teacher">Teacher</option>
+          <option value="Admin">Admin</option>
+        </select>
         <button
           type="submit"
           className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"

@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchStudents, addStudent, deleteStudent } from '../../redux/studentSlice';
+import { fetchStudents, addStudent, deleteStudent, updateStudent } from '../../redux/studentSlice';
 import { fetchPotentialStudents } from '../../redux/authSlice';
 
 function ManageStudents() {
   const dispatch = useDispatch();
   const { students, loading, error } = useSelector((state) => state.students);
   const { potentialStudents, loading: authLoading, error: authError } = useSelector((state) => state.auth);
+  const { user: authUser } = useSelector((state) => state.auth); // Get current user to check admin role
   const [studentData, setStudentData] = useState({
-    user: '',
+    name: '',
+    email: '',
+    password: '',
+    address: '',
     enrollmentNumber: '',
     class: '',
     section: '',
   });
+  const [editData, setEditData] = useState(null); // State to manage edit mode
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -24,20 +29,42 @@ function ManageStudents() {
     setStudentData({ ...studentData, [e.target.name]: e.target.value });
   };
 
+  const handleEditChange = (e) => {
+    setEditData({ ...editData, [e.target.name]: e.target.value });
+  };
+
   const handleAddStudent = (e) => {
     e.preventDefault();
-    if (!studentData.user || !studentData.enrollmentNumber.trim()) {
-      setMessage('Please select a student and enter an enrollment number.');
+    if (!studentData.name || !studentData.email || !studentData.password || !studentData.enrollmentNumber) {
+      setMessage('Name, email, password, and enrollment number are required.');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
-    dispatch(addStudent(studentData)).then((result) => {
+    const userData = {
+      name: studentData.name,
+      email: studentData.email,
+      password: studentData.password,
+      role: 'Student',
+      address: studentData.address || '',
+    };
+    const payload = {
+      userData,
+      enrollmentNumber: studentData.enrollmentNumber,
+      class: studentData.class || '',
+      section: studentData.section || '',
+    };
+    console.log('Final payload being sent:', JSON.stringify(payload, null, 2)); // Detailed debug log
+    dispatch(fetchPotentialStudents()); // Refresh potential students
+    dispatch(addStudent(payload)).then((result) => {
       if (result.meta.requestStatus === 'fulfilled') {
-        setMessage('Student added successfully');
-        setStudentData({ user: '', enrollmentNumber: '', class: '10th', section: 'A' });
-        setTimeout(() => setMessage(''), 3000);
+        dispatch(fetchStudents()).then(() => {
+          setMessage('Student added successfully');
+          setStudentData({ name: '', email: '', password: '', address: '', enrollmentNumber: '', class: '', section: '' });
+          setTimeout(() => setMessage(''), 3000);
+        });
       } else {
-        setMessage(result.payload);
+        setMessage(result.payload || 'Failed to add student');
+        console.error('Add student failed with payload:', payload, 'Error:', result.payload); // Detailed error log
         setTimeout(() => setMessage(''), 5000);
       }
     });
@@ -57,9 +84,58 @@ function ManageStudents() {
     }
   };
 
-  // Filter out already enrolled students from potentialStudents
+  const handleEditStudent = (student) => {
+    setEditData({
+      _id: student._id,
+      userId: student.user._id,
+      name: student.user.name || '',
+      email: student.user.email || '',
+      password: '', // Placeholder, will prompt for new password if needed
+      address: student.user.address || '',
+      enrollmentNumber: student.enrollmentNumber,
+      class: student.class || '',
+      section: student.section || '',
+    });
+  };
+
+  const handleUpdateStudent = (e) => {
+    e.preventDefault();
+    if (!editData.name || !editData.email || !editData.enrollmentNumber) {
+      setMessage('Name, email, and enrollment number are required.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+    const payload = {
+      _id: editData._id,
+      userId: editData.userId,
+      name: editData.name,
+      email: editData.email,
+      password: editData.password || undefined, // Only send if provided
+      address: editData.address,
+      enrollmentNumber: editData.enrollmentNumber,
+      class: editData.class,
+      section: editData.section,
+    };
+    dispatch(updateStudent(payload)).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        dispatch(fetchStudents()).then(() => {
+          setMessage('Student updated successfully');
+          setEditData(null);
+          setTimeout(() => setMessage(''), 3000);
+        });
+      } else {
+        setMessage(result.payload);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    });
+  };
+
   const enrolledUserIds = new Set(students.map((stu) => stu.user?._id));
   const availableStudents = potentialStudents.filter((user) => !enrolledUserIds.has(user._id));
+  console.log('students:', students);
+  console.log('potentialStudents:', potentialStudents);
+  console.log('enrolledUserIds:', enrolledUserIds);
+  console.log('availableStudents:', availableStudents);
 
   return (
     <div className="p-6">
@@ -77,26 +153,41 @@ function ManageStudents() {
             <div className="mb-2 text-gray-600 text-sm">
               Note: Different students can share the same enrollment number across different classes.
             </div>
-            {availableStudents.length === 0 ? (
-              <p className="text-gray-500">
-                No available student users. All potential students are enrolled or none exist.
-              </p>
-            ) : (
-              <select
-                name="user"
-                value={studentData.user}
-                onChange={handleChange}
-                className="border p-2 rounded"
-                required
-              >
-                <option value="">Select Student</option>
-                {availableStudents.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-              </select>
-            )}
+            <input
+              type="text"
+              name="name"
+              value={studentData.name}
+              onChange={handleChange}
+              placeholder="Name"
+              className="border p-2 rounded"
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              value={studentData.email}
+              onChange={handleChange}
+              placeholder="Email"
+              className="border p-2 rounded"
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              value={studentData.password}
+              onChange={handleChange}
+              placeholder="Password"
+              className="border p-2 rounded"
+              required
+            />
+            <input
+              type="text"
+              name="address"
+              value={studentData.address}
+              onChange={handleChange}
+              placeholder="Address"
+              className="border p-2 rounded"
+            />
             <input
               type="text"
               name="enrollmentNumber"
@@ -125,7 +216,7 @@ function ManageStudents() {
             <button
               type="submit"
               className="bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:bg-gray-400"
-              disabled={loading || availableStudents.length === 0}
+              disabled={loading}
             >
               {loading ? 'Adding...' : 'Add Student'}
             </button>
@@ -136,6 +227,8 @@ function ManageStudents() {
                 <tr className="bg-gray-200">
                   <th className="border p-2">Name</th>
                   <th className="border p-2">Email</th>
+                  <th className="border p-2">Password</th>
+                  <th className="border p-2">Address</th>
                   <th className="border p-2">Enrollment Number</th>
                   <th className="border p-2">Class</th>
                   <th className="border p-2">Section</th>
@@ -147,14 +240,23 @@ function ManageStudents() {
                   <tr key={stu._id} className="hover:bg-gray-100">
                     <td className="border p-2">{stu.user?.name || 'N/A'}</td>
                     <td className="border p-2">{stu.user?.email || 'N/A'}</td>
+                    <td className="border p-2">Hidden for security</td>
+                    <td className="border p-2">{stu.user?.address || 'N/A'}</td>
                     <td className="border p-2">{stu.enrollmentNumber}</td>
                     <td className="border p-2">{stu.class || 'N/A'}</td>
                     <td className="border p-2">{stu.section || 'N/A'}</td>
-                    <td className="border p-2">
+                    <td className="border p-2 flex gap-2">
+                      <button
+                        onClick={() => handleEditStudent(stu)}
+                        className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                        disabled={loading || (authUser && authUser.role !== 'Admin')}
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => handleDeleteStudent(stu._id)}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 disabled:bg-gray-400"
-                        disabled={loading}
+                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                        disabled={loading || (authUser && authUser.role !== 'Admin')}
                       >
                         Delete
                       </button>
@@ -163,6 +265,82 @@ function ManageStudents() {
                 ))}
               </tbody>
             </table>
+          )}
+          {editData && (
+            <div className="mt-6 bg-white p-6 rounded shadow max-w-md">
+              <h2 className="text-xl font-semibold mb-4">Edit Student</h2>
+              <form onSubmit={handleUpdateStudent} className="space-y-4">
+                <input
+                  type="text"
+                  name="name"
+                  value={editData.name}
+                  onChange={handleEditChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                  required
+                />
+                <input
+                  type="email"
+                  name="email"
+                  value={editData.email}
+                  onChange={handleEditChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                  required
+                />
+                <input
+                  type="password"
+                  name="password"
+                  value={editData.password}
+                  onChange={handleEditChange}
+                  placeholder="Leave blank to keep current password"
+                  className="mt-1 block w-full border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="address"
+                  value={editData.address}
+                  onChange={handleEditChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="enrollmentNumber"
+                  value={editData.enrollmentNumber}
+                  onChange={handleEditChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  name="class"
+                  value={editData.class}
+                  onChange={handleEditChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="section"
+                  value={editData.section}
+                  onChange={handleEditChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Update Student'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditData(null)}
+                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
         </>
       )}

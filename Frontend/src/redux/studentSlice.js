@@ -20,15 +20,41 @@ export const fetchStudents = createAsyncThunk(
 
 export const addStudent = createAsyncThunk(
   'students/addStudent',
-  async (studentData, { rejectWithValue, getState }) => {
+  async ({ userData, enrollmentNumber, class: className, section }, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.post(`${API_URL}/students`, studentData, {
+
+      // Log the data before sending
+      console.log('Attempting to sign up user with data:', JSON.stringify(userData, null, 2));
+
+      // Step 1: Create new user via signup (no Authorization header)
+      const signupResponse = await axios.post(`${API_URL}/auth/signup`, userData);
+      console.log('Signup response received:', JSON.stringify(signupResponse.data, null, 2));
+
+      if (!signupResponse.data.user || !signupResponse.data.user._id) {
+        throw new Error('Invalid user ID from signup response');
+      }
+
+      // Step 2: Create student record with the new user ID
+      const studentData = {
+        user: signupResponse.data.user._id,
+        enrollmentNumber,
+        class: className || '',
+        section: section || '',
+      };
+      console.log('Attempting to add student with data:', JSON.stringify(studentData, null, 2));
+
+      const studentResponse = await axios.post(`${API_URL}/students`, studentData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.student; // Expect { student: {...} }
+
+      return studentResponse.data.student;
     } catch (error) {
-      console.error('Add student error:', error.response?.data, error.response?.status, error.stack);
+      console.error('Add student error details:', {
+        data: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack,
+      });
       return rejectWithValue(error.response?.data?.message || 'Failed to add student');
     }
   }
@@ -45,6 +71,37 @@ export const deleteStudent = createAsyncThunk(
       return studentId;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to delete student');
+    }
+  }
+);
+
+export const updateStudent = createAsyncThunk(
+  'students/updateStudent',
+  async (studentData, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const { _id, userId, name, email, password, address, enrollmentNumber, class: className, section } = studentData;
+      if (name || email || password || address) {
+        const updateUserData = {};
+        if (name) updateUserData.name = name;
+        if (email) updateUserData.email = email;
+        if (password) updateUserData.password = password;
+        if (address) updateUserData.address = address;
+        await axios.put(`${API_URL}/auth/${userId}`, updateUserData, {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        });
+      }
+      const studentResponse = await axios.put(`${API_URL}/students/${_id}`, {
+        enrollmentNumber,
+        class: className,
+        section,
+        address,
+      }, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return studentResponse.data.student;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update student');
     }
   }
 );
@@ -66,7 +123,14 @@ const studentSlice = createSlice({
         state.loading = false; 
         state.students = state.students.filter((stu) => stu._id !== action.payload); 
       })
-      .addCase(deleteStudent.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
+      .addCase(deleteStudent.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+      .addCase(updateStudent.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(updateStudent.fulfilled, (state, action) => { 
+        state.loading = false; 
+        const index = state.students.findIndex(stu => stu._id === action.payload._id);
+        if (index !== -1) state.students[index] = action.payload;
+      })
+      .addCase(updateStudent.rejected, (state, action) => { state.loading = false; state.error = action.payload; });
   },
 });
 
