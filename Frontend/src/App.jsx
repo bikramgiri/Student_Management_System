@@ -13,7 +13,7 @@ import TeacherDashboard from "./components/teacher/TeacherDashboard";
 import StudentDashboard from "./components/student/StudentDashboard";
 import ManageStudents from "./components/admin/ManageStudents";
 import ManageTeachers from "./components/admin/ManageTeachers";
-import ManageCourses from "./components/admin/ManageCourses";
+import ManageSubjects from "./components/admin/ManageSubjects";
 import ManageLeaves from './components/admin/ManageLeaves';
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import ViewEditProfile from './components/admin/ViewEditProfile';
@@ -58,8 +58,8 @@ function App() {
               element={<ProtectedRoute allowedRoles={["Admin"]}><ManageTeachers /></ProtectedRoute>}
             />
             <Route
-              path="/admin/manage-courses"
-              element={<ProtectedRoute allowedRoles={["Admin"]}><ManageCourses /></ProtectedRoute>}
+              path="/admin/manage-subjects"
+              element={<ProtectedRoute allowedRoles={["Admin"]}><ManageSubjects /></ProtectedRoute>}
             />
             {/* <Route
               path="/admin/manage-feedbacks"

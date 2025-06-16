@@ -23,7 +23,7 @@ function AdminLayout() {
           <Link to="/admin/notify-students" className="block p-2 hover:bg-gray-700 rounded">Notify Student</Link>
           <Link to="/admin/manage-teachers" className="block p-2 hover:bg-gray-700 rounded">Manage Teachers</Link>
           <Link to="/admin/manage-students" className="block p-2 hover:bg-gray-700 rounded">Manage Students</Link>
-          <Link to="/admin/manage-courses" className="block p-2 hover:bg-gray-700 rounded">Manage Subjects</Link>
+          <Link to="/admin/manage-subjects" className="block p-2 hover:bg-gray-700 rounded">Manage Subjects</Link>
           <Link to="/admin/manage-leaves" className="block p-2 hover:bg-gray-700 rounded">Manage Leaves</Link>
         </nav>
       </div>

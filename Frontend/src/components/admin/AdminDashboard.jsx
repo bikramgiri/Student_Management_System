@@ -1,10 +1,9 @@
-// src/components/admin/AdminDashboard.jsx
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { fetchStudents } from '../../redux/studentSlice';
 import { fetchTeachers } from '../../redux/teacherSlice';
-import { fetchCourses } from '../../redux/courseSlice';
+import { fetchSubjects } from '../../redux/subjectSlice';
 import { fetchAllLeaves } from '../../redux/leaveSlice';
 import { fetchAttendanceSummary } from '../../redux/attendanceSummarySlice';
 import { fetchResultsSummary } from '../../redux/resultsSummarySlice';
@@ -13,7 +12,7 @@ function AdminDashboard() {
   const dispatch = useDispatch();
   const { students, loading: studentsLoading, error: studentsError } = useSelector((state) => state.students);
   const { teachers, loading: teachersLoading, error: teachersError } = useSelector((state) => state.teachers);
-  const { courses, loading: coursesLoading, error: coursesError } = useSelector((state) => state.courses);
+  const { subjects, loading: subjectsLoading, error: subjectsError } = useSelector((state) => state.subjects);
   const { leaves, loading: leavesLoading, error: leavesError } = useSelector((state) => state.leaves);
   const { data: attendanceData, loading: attendanceLoading, error: attendanceError } = useSelector((state) => state.attendanceSummary);
   const { data: resultsData, loading: resultsLoading, error: resultsError } = useSelector((state) => state.resultsSummary);
@@ -22,17 +21,19 @@ function AdminDashboard() {
   useEffect(() => {
     dispatch(fetchStudents());
     dispatch(fetchTeachers());
-    dispatch(fetchCourses());
+    dispatch(fetchSubjects());
     dispatch(fetchAllLeaves());
     dispatch(fetchAttendanceSummary());
     dispatch(fetchResultsSummary());
   }, [dispatch]);
 
+  // Ensure leaves is always an array, default to empty array if null or undefined
+  const safeLeaves = Array.isArray(leaves) ? leaves : [];
   const summaryData = [
     { name: 'Students', count: students.length },
     { name: 'Teachers', count: teachers.length },
-    { name: 'Subjects', count: courses.length },
-    { name: 'Pending Leaves', count: leaves.filter(leave => leave.status === 'Pending').length },
+    { name: 'Subjects', count: subjects.length },
+    { name: 'Pending Leaves', count: safeLeaves.filter(leave => leave.status === 'Pending').length },
   ];
 
   const handleRefresh = () => {
@@ -40,7 +41,7 @@ function AdminDashboard() {
     Promise.all([
       dispatch(fetchStudents()),
       dispatch(fetchTeachers()),
-      dispatch(fetchCourses()),
+      dispatch(fetchSubjects()),
       dispatch(fetchAllLeaves()),
       dispatch(fetchAttendanceSummary()),
       dispatch(fetchResultsSummary()),
@@ -53,8 +54,8 @@ function AdminDashboard() {
     });
   };
 
-  const isLoading = studentsLoading || teachersLoading || coursesLoading || leavesLoading;
-  const hasError = studentsError || teachersError || coursesError || leavesError;
+  const isLoading = studentsLoading || teachersLoading || subjectsLoading || leavesLoading;
+  const hasError = studentsError || teachersError || subjectsError || leavesError;
 
   const BarChartComponent = ({ data, xKey, yKey, barColor }) => (
     <BarChart width={600} height={300} data={data}>
@@ -87,11 +88,11 @@ function AdminDashboard() {
         </div>
         <div className="bg-yellow-500 text-white p-4 rounded shadow">
           <p className="text-lg">Total Subjects</p>
-          <p className="text-2xl">{courses.length}</p>
+          <p className="text-2xl">{subjects.length}</p>
         </div>
         <div className="bg-red-500 text-white p-4 rounded shadow">
           <p className="text-lg">Pending Leaves</p>
-          <p className="text-2xl">{leaves.filter(leave => leave.status === 'Pending').length}</p>
+          <p className="text-2xl">{safeLeaves.filter(leave => leave.status === 'Pending').length}</p>
         </div>
       </div>
 
@@ -107,7 +108,7 @@ function AdminDashboard() {
         {isLoading ? (
           <p className="text-gray-500">Loading summary data...</p>
         ) : hasError ? (
-          <p className="text-red-500">{studentsError || teachersError || coursesError || leavesError}</p>
+          <p className="text-red-500">{studentsError || teachersError || subjectsError || leavesError}</p>
         ) : (
           <BarChartComponent data={summaryData} xKey="name" yKey="count" barColor="#8884d8" />
         )}

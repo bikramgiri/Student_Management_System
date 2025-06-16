@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchAllLeaves, updateLeaveStatus } from '../../redux/leaveSlice';
+import { fetchAllLeaves, updateLeaveStatus, deleteLeave } from '../../redux/leaveSlice';
 
 function ManageLeaves() {
   const dispatch = useDispatch();
   const { leaves, loading, error } = useSelector((state) => state.leaves);
+  console.log('Leaves in state:', leaves);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [message, setMessage] = useState('');
@@ -61,6 +62,22 @@ function ManageLeaves() {
       });
   };
 
+  const handleDeleteLeave = (id) => {
+    if (window.confirm('Are you sure you want to delete this leave?')) {
+      setUpdatingLeaveId(id);
+      dispatch(deleteLeave(id)).then((result) => {
+        setUpdatingLeaveId(null);
+        if (result.meta.requestStatus === 'fulfilled') {
+          setMessage(`Leave ${id} deleted successfully`);
+          setTimeout(() => setMessage(''), 3000);
+        } else {
+          setMessage(`Failed to delete leave: ${result.payload}`);
+          setTimeout(() => setMessage(''), 5000);
+        }
+      });
+    }
+  };
+
   const handleRefresh = () => {
     setMessage('Refreshing leaves...');
     dispatch(fetchAllLeaves()).then((result) => {
@@ -91,7 +108,9 @@ function ManageLeaves() {
     );
   };
 
-  const filteredLeaves = leaves.filter((leave) => {
+  // Ensure leaves is always an array, default to empty array if null or undefined
+  const safeLeaves = Array.isArray(leaves) ? leaves : [];
+  const filteredLeaves = safeLeaves.filter((leave) => {
     const matchesSearch =
       leave.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (leave.student?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -309,10 +328,19 @@ function ManageLeaves() {
                           onClick={() => handleUpdateStatus(leave._id, 'Pending')}
                           className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 disabled:bg-gray-400 transition-colors"
                           disabled={updatingLeaveId === leave._id}
+                          title="Revert to Pending"
                         >
-                          {updatingLeaveId === leave._id ? 'Updating...' : 'Revert to Pending'}
+                          {updatingLeaveId === leave._id ? 'Updating...' : 'Revert'}
                         </button>
                       )}
+                      <button
+                        onClick={() => handleDeleteLeave(leave._id)}
+                        className="bg-red-700 text-white px-3 py-1 rounded hover:bg-red-800 disabled:bg-gray-400 transition-colors"
+                        disabled={updatingLeaveId === leave._id}
+                        title="Delete Leave"
+                      >
+                        {updatingLeaveId === leave._id ? 'Deleting...' : 'Delete'}
+                      </button>
                     </td>
                   </tr>
                 ))}

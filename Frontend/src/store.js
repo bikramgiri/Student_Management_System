@@ -3,7 +3,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './redux/authSlice';
 import studentReducer from './redux/studentSlice';
 import teacherReducer from './redux/teacherSlice';
-import courseReducer from './redux/courseSlice';
+import subjectReducer from './redux/subjectSlice';
 import attendanceReducer from './redux/attendanceSlice';
 import resultReducer from './redux/resultSlice';
 import leaveReducer from './redux/leaveSlice';
@@ -16,7 +16,7 @@ const store = configureStore({
     auth: authReducer,
     students: studentReducer,
     teachers: teacherReducer,
-    courses: courseReducer,
+    subjects: subjectReducer,
     attendance: attendanceReducer,
     results: resultReducer,
     leaves: leaveReducer,

@@ -234,17 +234,16 @@ function LeaveApplicationFormTeacher() {
 
   const handleSubmitLeave = (e) => {
     e.preventDefault();
-    console.log('Submitting formData:', JSON.stringify(formData, null, 2)); // Enhanced logging
+    console.log('Submitting formData:', JSON.stringify(formData, null, 2));
     const { date, reason } = formData;
     const parsedDate = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (!date) {
-      setMessage('Date is required');
+      setMessage ('Date is required');
       return;
     }
-
     if (isNaN(parsedDate.getTime())) {
       setMessage('Invalid date format');
       return;
@@ -263,9 +262,9 @@ function LeaveApplicationFormTeacher() {
     }
 
     dispatch(submitTeacherLeave(formData)).then((result) => {
-      console.log('submitTeacherLeave result:', JSON.stringify(result, null, 2)); // Debug log
+      console.log('submitTeacherLeave result:', JSON.stringify(result, null, 2));
       if (result.meta.requestStatus === 'fulfilled') {
-        const leave = result.payload;
+        const leave = result.payload.leave; // Correctly access the leave object
         if (!leave) {
           console.error('No leave object in payload:', result.payload);
           setMessage('Failed to submit leave: Invalid response');
@@ -290,7 +289,7 @@ function LeaveApplicationFormTeacher() {
         </p>
       )}
       {loading && <p className="text-gray-500">Submitting...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      {error && typeof error === 'string' && <p className="text-red-500">{error}</p>}
       <form onSubmit={handleSubmitLeave} className="flex flex-col gap-2">
         <input
           type="date"

@@ -10,7 +10,8 @@ function ViewEditProfile() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Admin', // Role is fixed as Admin
+    role: 'Admin',
+    password: '', // Add password field
   });
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState('');
@@ -25,9 +26,10 @@ function ViewEditProfile() {
         name: user.name || '',
         email: user.email || '',
         role: user.role || 'Admin',
+        password: '', // Always start with empty password
       });
     } else {
-      navigate('/login'); // Redirect to login if user is not authenticated
+      navigate('/login');
     }
   }, [user, navigate]);
 
@@ -47,7 +49,7 @@ function ViewEditProfile() {
         setIsEditing(false);
         setTimeout(() => {
           setMessage('');
-          navigate('/admin/dashboard'); // Redirect to dashboard after successful update
+          navigate('/admin/dashboard');
         }, 3000);
       } else {
         setMessage(result.payload || 'Failed to update profile');
@@ -62,11 +64,12 @@ function ViewEditProfile() {
         name: user.name || '',
         email: user.email || '',
         role: user.role || 'Admin',
+        password: '',
       });
     }
   };
 
-  if (!user) return null; // Handled in useEffect, so this is a fallback
+  if (!user) return null;
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -125,13 +128,13 @@ function ViewEditProfile() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Role</label>
+                <label className="block text-sm font-medium text-gray-700">New Password</label>
                 <input
-                  type="text"
-                  name="role"
-                  value={formData.role}
-                  disabled
-                  className="mt-1 block w-full border p-2 rounded bg-gray-100"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="mt-1 block w-full border p-2 rounded"
                 />
               </div>
               <div className="flex gap-2">

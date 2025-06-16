@@ -9,10 +9,10 @@ export const submitStudentLeave = createAsyncThunk(
   async (leaveData, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.post(`${API_URL}/leaves`, leaveData, {
+      const { data } = await axios.post(`${API_URL}/leaves`, leaveData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.leave;
+      return data.leave; // Return only the leave object
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
     }
@@ -21,14 +21,15 @@ export const submitStudentLeave = createAsyncThunk(
 
 export const submitTeacherLeave = createAsyncThunk(
   'leaves/submitTeacherLeave',
-  async (leaveData, { rejectWithValue, getState }) => {
+  async (leaveData, { rejectWithValue, getState, dispatch }) => {
     try {
       const { auth } = getState();
-      const response = await axios.post(`${API_URL}/leaves/teacher`, leaveData, {
+      const { data } = await axios.post(`${API_URL}/leaves/teacher`, leaveData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      console.log('submitTeacherLeave response:', response.data); // Debug log
-      return response.data.leave;
+      console.log('submitTeacherLeave response:', data);
+      dispatch(fetchAllLeaves());
+      return data.leave; // Return only the leave object
     } catch (error) {
       console.error('submitTeacherLeave error:', error.response?.data);
       return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
@@ -41,10 +42,10 @@ export const fetchLeaves = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.get(`${API_URL}/leaves/student`, {
+      const { data } = await axios.get(`${API_URL}/leaves/student`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.leaves;
+      return data.leaves;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch leaves');
     }
@@ -56,10 +57,11 @@ export const fetchAllLeaves = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.get(`${API_URL}/leaves`, {
+      const { data } = await axios.get(`${API_URL}/leaves`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.leaves;
+      console.log('Fetched leaves:', data.leaves);
+      return data.leaves;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch all leaves');
     }
@@ -71,12 +73,27 @@ export const updateLeaveStatus = createAsyncThunk(
   async ({ id, status }, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.put(`${API_URL}/leaves/${id}`, { status }, {
+      const { data } = await axios.put(`${API_URL}/leaves/${id}`, { status }, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.leave;
+      return data.leave; // Return only the updated leave object
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update leave status');
+    }
+  }
+);
+
+export const deleteLeave = createAsyncThunk(
+  'leaves/deleteLeave',
+  async (id, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      await axios.delete(`${API_URL}/leaves/${id}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete leave');
     }
   }
 );
@@ -103,15 +120,13 @@ const leaveSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
-      // Add cases for submitTeacherLeave
       .addCase(submitTeacherLeave.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(submitTeacherLeave.fulfilled, (state, action) => {
+      .addCase(submitTeacherLeave.fulfilled, (state) => {
         state.loading = false;
-        state.leaves.push(action.payload);
+        state.error = null;
       })
       .addCase(submitTeacherLeave.rejected, (state, action) => {
         state.loading = false;
@@ -153,6 +168,18 @@ const leaveSlice = createSlice({
         );
       })
       .addCase(updateLeaveStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteLeave.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteLeave.fulfilled, (state, action) => {
+        state.loading = false;
+        state.leaves = state.leaves.filter((leave) => leave._id !== action.payload);
+      })
+      .addCase(deleteLeave.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

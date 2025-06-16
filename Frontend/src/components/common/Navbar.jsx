@@ -24,6 +24,7 @@ function Navbar() {
             {role === 'Admin' && <Link to="/admin/dashboard" className="mr-4">Admin</Link>}
             {role === 'Teacher' && <Link to="/teacher/dashboard" className="mr-4">Teacher</Link>}
             {role === 'Student' && <Link to="/student/dashboard" className="mr-4">Student</Link>}
+            <Link to="/" className="font-bold text-xl px-3 py-1 mr-4">Home</Link>
             <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded">
               Logout
             </button>

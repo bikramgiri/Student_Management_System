@@ -11,9 +11,8 @@ function ManageTeachers() {
     name: '',
     email: '',
     password: '',
-    subject: '',
-    qualification: '',
-    experience: '',
+    address: '',
+    contactNumber: '',
   });
   const [editData, setEditData] = useState(null); // State to manage edit mode
   const [message, setMessage] = useState('');
@@ -32,14 +31,8 @@ function ManageTeachers() {
 
   const handleAddTeacher = (e) => {
     e.preventDefault();
-    if (!teacherData.name || !teacherData.email || !teacherData.password || !teacherData.subject || !teacherData.qualification) {
-      setMessage('Name, email, password, subject, and qualification are required.');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-    const exp = Number(teacherData.experience);
-    if (teacherData.experience && (isNaN(exp) || exp < 0)) {
-      setMessage('Experience must be a non-negative number.');
+    if (!teacherData.name || !teacherData.email || !teacherData.password || !teacherData.address || !teacherData.contactNumber) {
+      setMessage('Name, email, password, address, and contact number are required.');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
@@ -53,15 +46,14 @@ function ManageTeachers() {
       if (result.meta.requestStatus === 'fulfilled') {
         const newTeacherData = {
           user: result.payload.user._id,
-          subject: teacherData.subject,
-          qualification: teacherData.qualification,
-          experience: exp || 0,
+          address: teacherData.address,
+          contactNumber: teacherData.contactNumber,
         };
         dispatch(addTeacher(newTeacherData)).then((teacherResult) => {
           if (teacherResult.meta.requestStatus === 'fulfilled') {
             dispatch(fetchTeachers()).then(() => {
               setMessage('Teacher added successfully');
-              setTeacherData({ name: '', email: '', password: '', subject: '', qualification: '', experience: '' });
+              setTeacherData({ name: '', email: '', password: '', address: '', contactNumber: '' });
               setTimeout(() => setMessage(''), 3000);
             });
           } else {
@@ -97,22 +89,15 @@ function ManageTeachers() {
       name: teacher.user.name || '',
       email: teacher.user.email || '',
       password: '', // Placeholder, will prompt for new password if needed
-      subject: teacher.subject,
-      qualification: teacher.qualification,
-      experience: teacher.experience || '',
+      address: teacher.address || '',
+      contactNumber: teacher.contactNumber || '',
     });
   };
 
   const handleUpdateTeacher = (e) => {
     e.preventDefault();
-    if (!editData.name || !editData.email || !editData.subject || !editData.qualification) {
-      setMessage('Name, email, subject, and qualification are required.');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-    const exp = Number(editData.experience);
-    if (editData.experience && (isNaN(exp) || exp < 0)) {
-      setMessage('Experience must be a non-negative number.');
+    if (!editData.name || !editData.email || !editData.address || !editData.contactNumber) {
+      setMessage('Name, email, address, and contact number are required.');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
@@ -122,9 +107,8 @@ function ManageTeachers() {
       name: editData.name,
       email: editData.email,
       password: editData.password || undefined, // Only send if provided
-      subject: editData.subject,
-      qualification: editData.qualification,
-      experience: exp || 0,
+      address: editData.address,
+      contactNumber: editData.contactNumber,
     };
     dispatch(updateTeacher(payload)).then((result) => {
       if (result.meta.requestStatus === 'fulfilled') {
@@ -184,29 +168,21 @@ function ManageTeachers() {
             />
             <input
               type="text"
-              name="subject"
-              value={teacherData.subject}
+              name="address"
+              value={teacherData.address}
               onChange={handleChange}
-              placeholder="Subject"
+              placeholder="Address"
               className="border p-2 rounded"
               required
             />
             <input
               type="text"
-              name="qualification"
-              value={teacherData.qualification}
+              name="contactNumber"
+              value={teacherData.contactNumber}
               onChange={handleChange}
-              placeholder="Qualification"
+              placeholder="Contact Number"
               className="border p-2 rounded"
               required
-            />
-            <input
-              type="text"
-              name="experience"
-              value={teacherData.experience}
-              onChange={handleChange}
-              placeholder="Experience (years)"
-              className="border p-2 rounded"
             />
             <button
               type="submit"
@@ -223,9 +199,8 @@ function ManageTeachers() {
                   <th className="border p-2">Name</th>
                   <th className="border p-2">Email</th>
                   <th className="border p-2">Password</th>
-                  <th className="border p-2">Subject</th>
-                  <th className="border p-2">Qualification</th>
-                  <th className="border p-2">Experience</th>
+                  <th className="border p-2">Address</th>
+                  <th className="border p-2">Contact Number</th>
                   <th className="border p-2">Actions</th>
                 </tr>
               </thead>
@@ -235,9 +210,8 @@ function ManageTeachers() {
                     <td className="border p-2">{teacher.user?.name || 'N/A'}</td>
                     <td className="border p-2">{teacher.user?.email || 'N/A'}</td>
                     <td className="border p-2">Hidden for security</td>
-                    <td className="border p-2">{teacher.subject}</td>
-                    <td className="border p-2">{teacher.qualification || 'N/A'}</td>
-                    <td className="border p-2">{teacher.experience || 'N/A'}</td>
+                    <td className="border p-2">{teacher.address || 'N/A'}</td>
+                    <td className="border p-2">{teacher.contactNumber || 'N/A'}</td>
                     <td className="border p-2 flex gap-2">
                       <button
                         onClick={() => handleEditTeacher(teacher)}
@@ -289,27 +263,19 @@ function ManageTeachers() {
                 />
                 <input
                   type="text"
-                  name="subject"
-                  value={editData.subject}
+                  name="address"
+                  value={editData.address}
                   onChange={handleEditChange}
                   className="mt-1 block w-full border p-2 rounded"
                   required
                 />
                 <input
                   type="text"
-                  name="qualification"
-                  value={editData.qualification}
+                  name="contactNumber"
+                  value={editData.contactNumber}
                   onChange={handleEditChange}
                   className="mt-1 block w-full border p-2 rounded"
                   required
-                />
-                <input
-                  type="text"
-                  name="experience"
-                  value={editData.experience}
-                  onChange={handleEditChange}
-                  placeholder="Experience (years)"
-                  className="mt-1 block w-full border p-2 rounded"
                 />
                 <div className="flex gap-2">
                   <button

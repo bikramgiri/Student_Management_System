@@ -73,9 +73,8 @@ export const updateTeacher = createAsyncThunk(
         name: teacherData.name,
         email: teacherData.email,
         password: teacherData.password,
-        subject: teacherData.subject,
-        qualification: teacherData.qualification,
-        experience: teacherData.experience,
+        address: teacherData.address,
+        contactNumber: teacherData.contactNumber,
       }, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
