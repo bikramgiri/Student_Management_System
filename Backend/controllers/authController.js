@@ -109,7 +109,7 @@ exports.fetchAdminProfile = async (req, res) => {
 exports.updateAdminProfile = async (req, res) => {
   try {
     const { _id } = req.user;
-    const { name, email } = req.body;
+    const { name, email, password } = req.body;
 
     // Validate input
     if (!name || !email) {
@@ -122,29 +122,41 @@ exports.updateAdminProfile = async (req, res) => {
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
-    // Update user
-    const updatedUser = await User.findByIdAndUpdate(
-      _id,
-      { name, email },
-      { new: true, runValidators: true }
-    ).select('name email role');
-
-    if (!updatedUser || updatedUser.role !== 'Admin') {
+    // Find the user
+    const user = await User.findById(_id);
+    if (!user || user.role !== 'Admin') {
       return res.status(404).json({ message: 'Admin profile not found' });
     }
 
+    // Update fields
+    user.name = name;
+    user.email = email;
+    if (password && password.trim() !== '') {
+      user.password = password; // Will be hashed by pre-save hook
+    }
+
+    await user.save();
+
     // Generate new token with updated data
     const token = jwt.sign(
-      { _id: updatedUser._id, email: updatedUser.email, role: updatedUser.role },
-      process.env.JWT_SECRET,
+      { _id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({ message: 'Profile updated successfully', user: updatedUser, token });
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role },
+      token,
+    });
   } catch (error) {
     console.error('Error updating admin profile:', error.message);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ message: 'Validation error', details: error.errors });
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: 'Password must be at least 6 characters', details: errors });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Email already in use' });
     }
     res.status(500).json({ message: 'Server error', error: error.message });
   }

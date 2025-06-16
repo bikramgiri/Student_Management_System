@@ -8,7 +8,7 @@ const authMiddleware = require('./middleware/authMiddleware'); // Import middlew
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const teacherRoutes = require('./routes/teacherRoutes');
-const courseRoutes = require('./routes/courseRoutes');
+const subjectRoutes = require('./routes/subjectRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes'); // Add this
 const resultRoutes = require('./routes/resultRoutes'); // Add this
 const leaveRoutes = require('./routes/leaveRoutes'); // Add this
@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
       auth: "/auth", 
       students: "/students", 
       teachers: "/teachers", 
-      courses: "/courses",
+      subjects: "/subjects",
       attendance: "/attendance",
       results: "/results",
       leaves: "/leaves",
@@ -47,7 +47,7 @@ app.get('/', (req, res) => {
 app.use('/auth', authRoutes); // Unprotected
 app.use('/students', authMiddleware, studentRoutes); // Protected
 app.use('/teachers', authMiddleware, teacherRoutes); // Protected
-app.use('/courses', authMiddleware, courseRoutes);   // Protected
+app.use('/subjects', authMiddleware, subjectRoutes);   // Protected
 app.use('/attendance', authMiddleware, attendanceRoutes); // Protected
 app.use('/results', authMiddleware, resultRoutes);       // Protected
 app.use('/leaves', authMiddleware, leaveRoutes);         // Protected

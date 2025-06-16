@@ -4,7 +4,7 @@ const User = require('../models/User');
 
 exports.getStudentLeaves = async (req, res) => {
   try {
-    const { role, _id: studentId} = req.user;
+    const { role, _id: studentId } = req.user;
     if (role !== 'Student') return res.status(403).json({ message: 'Forbidden' });
 
     const leaves = await Leave.find({ student: studentId })
@@ -51,99 +51,6 @@ exports.submitStudentLeave = async (req, res) => {
     res.status(201).json({ message: 'Leave submitted successfully', leave });
   } catch (error) {
     console.error('Error submitting leave:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-// exports.submitTeacherLeave = async (req, res) => {
-//   try {
-//     console.log('submitTeacherLeave: Starting, req.user:', req.user, 'req.body:', req.body); // Debug log
-//     const { role, _id: teacherId } = req.user;
-//     if (role !== 'Teacher') {
-//       return res.status(403).json({ message: 'Forbidden: Only teachers can submit leaves' });
-//     }
-
-//     const { date, reason } = req.body;
-//     if (!date || !reason || typeof reason !== 'string' || reason.trim() === '') {
-//       return res.status(400).json({ message: 'Date and a non-empty reason are required' });
-//     }
-
-//     const parsedDate = new Date(date);
-//     const today = new Date();
-//     today.setHours(0, 0, 0, 0);
-//     if (isNaN(parsedDate.getTime())) {
-//       return res.status(400).json({ message: 'Invalid date format' });
-//     }
-//     if (parsedDate < today) {
-//       return res.status(400).json({ message: 'Leave date cannot be in the past' });
-//     }
-
-//     const trimmedReason = reason.trim();
-//     if (trimmedReason.length > 500) {
-//       return res.status(400).json({ message: 'Reason cannot exceed 500 characters' });
-//     }
-
-//     const existingLeave = await Leave.findOne({ teacher: teacherId, date: parsedDate });
-//     if (existingLeave) {
-//       return res.status(400).json({ message: 'Leave already requested for this date' });
-//     }
-
-//     const leave = new Leave({ teacher: teacherId, date: parsedDate, reason: trimmedReason, status: 'Pending' });
-//     await leave.save();
-//     await leave.populate('teacher', 'name email');
-
-//     res.status(201).json({ message: 'Leave submitted successfully', leave });
-//   } catch (error) {
-//     console.error('Error submitting leave:', error); // Enhanced error logging
-//     if (error.name === 'ValidationError') {
-//       const errors = Object.values(error.errors).map(err => err.message);
-//       return res.status(400).json({ message: 'Validation error', details: errors });
-//     }
-//     res.status(500).json({ message: 'Server error', error: error.message });
-//   }
-// };
-
-exports.getAllLeaves = async (req, res) => {
-  try {
-    const { role } = req.user;
-    if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can view all leaves' });
-
-    const leaves = await Leave.find()
-      .populate('student', 'name email')
-      .populate('teacher', 'name email')
-      .populate('admin', 'name email');
-    res.status(200).json({ leaves });
-  } catch (error) {
-    console.error('Error fetching all leaves:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-exports.updateLeaveStatus = async (req, res) => {
-  try {
-    const { role } = req.user;
-    if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can update leave status' });
-
-    const { status } = req.body;
-    if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
-      return res.status(400).json({ message: 'Status must be "Pending", "Approved", or "Rejected"' });
-    }
-
-    const leave = await Leave.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    )
-      .populate('student', 'name email')
-      .populate('teacher', 'name email')
-      .populate('admin', 'name email');
-
-    if (!leave) return res.status(404).json({ message: 'Leave not found' });
-
-    res.status(200).json({ message: 'Leave status updated successfully', leave });
-  } catch (error) {
-    console.error('Error updating leave status:', error.message);
-    if (error.name === 'CastError') return res.status(400).json({ message: 'Invalid leave ID' });
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -205,7 +112,7 @@ exports.submitTeacherLeave = async (req, res) => {
       message: 'Leave application submitted successfully',
       leave: {
         _id: leave._id,
-        teacher: leave.teacher, // Now includes { _id, name, email }
+        teacher: leave.teacher,
         date: leave.date,
         reason: leave.reason,
         status: leave.status,
@@ -218,6 +125,78 @@ exports.submitTeacherLeave = async (req, res) => {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({ message: 'Validation error', details: error.errors });
     }
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.getAllLeaves = async (req, res) => {
+  try {
+    // const { role } = req.user;
+    // if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can view all leaves' });
+
+    const leaves = await Leave.find()
+      .populate('student', 'name email')
+      .populate('teacher', 'name email')
+      .populate('admin', 'name email');
+  console.log('Leaves fetched:', leaves.map(l => ({
+  _id: l._id,
+  teacher: l.teacher?._id,
+  student: l.student?._id,
+  date: l.date,
+  status: l.status
+})));
+    res.status(200).json({ leaves });
+  } catch (error) {
+    console.error('Error fetching all leaves:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.updateLeaveStatus = async (req, res) => {
+  try {
+    const { role } = req.user;
+    if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can update leave status' });
+
+    const { status } = req.body;
+    if (!status || !['Pending', 'Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Status must be "Pending", "Approved", or "Rejected"' });
+    }
+
+    const leave = await Leave.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    )
+      .populate('student', 'name email')
+      .populate('teacher', 'name email')
+      .populate('admin', 'name email');
+
+    if (!leave) return res.status(404).json({ message: 'Leave not found' });
+
+    res.status(200).json({ message: 'Leave status updated successfully', leave });
+  } catch (error) {
+    console.error('Error updating leave status:', error.message);
+    if (error.name === 'CastError') return res.status(400).json({ message: 'Invalid leave ID' });
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.deleteLeave = async (req, res) => {
+  try {
+    const { role } = req.user;
+    if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can delete leaves' });
+
+    const leave = await Leave.findByIdAndDelete(req.params.id)
+      .populate('student', 'name email')
+      .populate('teacher', 'name email')
+      .populate('admin', 'name email');
+
+    if (!leave) return res.status(404).json({ message: 'Leave not found' });
+
+    res.status(200).json({ message: 'Leave deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting leave:', error.message);
+    if (error.name === 'CastError') return res.status(400).json({ message: 'Invalid leave ID' });
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

@@ -1,3 +1,4 @@
+// controllers/teacherController.js
 const Teacher = require('../models/Teacher');
 const User = require('../models/User');
 
@@ -40,19 +41,15 @@ exports.getAvailableTeachers = async (req, res) => {
 
 exports.addTeacher = async (req, res) => {
   try {
-    const { user, subject, qualification, experience } = req.body;
-    if (!user || !subject || !qualification) {
-      return res.status(400).json({ message: 'User, subject, and qualification are required' });
-    }
-    if (experience && (isNaN(Number(experience)) || Number(experience) < 0)) {
-      return res.status(400).json({ message: 'Experience must be a non-negative number' });
+    const { user, address, contactNumber } = req.body;
+    if (!user || !address || !contactNumber) {
+      return res.status(400).json({ message: 'User, address, and contact number are required' });
     }
 
     const teacher = new Teacher({
       user,
-      subject,
-      qualification,
-      experience: Number(experience) || 0,
+      address,
+      contactNumber,
     });
     await teacher.save();
     const populatedTeacher = await Teacher.findById(teacher._id).populate('user', 'name email');
@@ -65,12 +62,9 @@ exports.addTeacher = async (req, res) => {
 exports.updateTeacher = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, name, email, password, subject, qualification, experience } = req.body;
-    if (!subject || !qualification) {
-      return res.status(400).json({ message: 'Subject and qualification are required' });
-    }
-    if (experience && (isNaN(Number(experience)) || Number(experience) < 0)) {
-      return res.status(400).json({ message: 'Experience must be a non-negative number' });
+    const { userId, name, email, password, address, contactNumber } = req.body;
+    if (!address || !contactNumber) {
+      return res.status(400).json({ message: 'Address and contact number are required' });
     }
 
     // Update User data
@@ -85,7 +79,7 @@ exports.updateTeacher = async (req, res) => {
     // Update Teacher data
     const updatedTeacher = await Teacher.findByIdAndUpdate(
       id,
-      { subject, qualification, experience: Number(experience) || 0 },
+      { address, contactNumber },
       { new: true, runValidators: true }
     ).populate('user', 'name email');
     if (!updatedTeacher) {
