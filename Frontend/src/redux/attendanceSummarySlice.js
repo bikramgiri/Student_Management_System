@@ -8,12 +8,19 @@ export const fetchAttendanceSummary = createAsyncThunk(
   async (_, { getState, rejectWithValue }) => {
     try {
       const { auth } = getState();
-      const today = new Date().toLocaleDateString(); // e.g., "6/10/2025"
-      const response = await axios.get(`${API_URL}/api/attendance/summary?date=${today}`, {
+      const { role } = getState().auth.user || {};
+      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }); // Current date: "6/19/2025"
+      const endpoint = role === 'Admin' ? '/api/attendance/summary/admin' : '/api/attendance/summary';
+      const response = await axios.get(`${API_URL}${endpoint}?date=${today}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
+      console.log('API Response:', response.data); // Debug log
+      if (!response.data || typeof response.data !== 'object' || (!('present' in response.data) && !('absent' in response.data))) {
+        throw new Error('Invalid attendance summary data');
+      }
       return response.data;
     } catch (error) {
+      console.error('Error fetching attendance summary:', error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch attendance summary');
     }
   }
@@ -22,7 +29,7 @@ export const fetchAttendanceSummary = createAsyncThunk(
 const attendanceSummarySlice = createSlice({
   name: 'attendanceSummary',
   initialState: {
-    data: { present: 0, absent: 0, late: 0 },
+    data: { present: 0, absent: 0 },
     loading: false,
     error: null,
   },

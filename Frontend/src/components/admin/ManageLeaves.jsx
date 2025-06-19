@@ -108,7 +108,6 @@ function ManageLeaves() {
     );
   };
 
-  // Ensure leaves is always an array, default to empty array if null or undefined
   const safeLeaves = Array.isArray(leaves) ? leaves : [];
   const filteredLeaves = safeLeaves.filter((leave) => {
     const matchesSearch =
@@ -140,7 +139,6 @@ function ManageLeaves() {
     page * itemsPerPage
   );
 
-  // Helper function to get applicant display text
   const getApplicantDisplay = (leave) => {
     if (leave.student) {
       return getStudentDisplay(leave);
@@ -150,7 +148,6 @@ function ManageLeaves() {
     return 'N/A';
   };
 
-  // Helper function to get student display text
   const getStudentDisplay = (leave) => {
     if (leave.student && leave.student.name) {
       return `${leave.student.name} (Student, ${leave.student.email || 'No email'})`;
@@ -158,7 +155,6 @@ function ManageLeaves() {
     return leave.student?._id ? `Student ID: ${leave.student._id}` : 'N/A';
   };
 
-  // Helper function to get teacher display text
   const getTeacherDisplay = (leave) => {
     if (leave.teacher && leave.teacher.name) {
       return `${leave.teacher.name} (Teacher, ${leave.teacher.email || 'No email'})`;

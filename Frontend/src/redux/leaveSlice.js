@@ -1,4 +1,3 @@
-// src/redux/leaveSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
@@ -6,13 +5,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const submitStudentLeave = createAsyncThunk(
   'leaves/submitStudentLeave',
-  async (leaveData, { rejectWithValue, getState }) => {
+  async (leaveData, { rejectWithValue, getState, dispatch }) => {
     try {
       const { auth } = getState();
-      const { data } = await axios.post(`${API_URL}/leaves`, leaveData, {
+      const { data } = await axios.post(`${API_URL}/leaves/student`, leaveData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return data.leave; // Return only the leave object
+      dispatch(fetchAllLeaves());
+      return data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
     }
@@ -27,27 +27,10 @@ export const submitTeacherLeave = createAsyncThunk(
       const { data } = await axios.post(`${API_URL}/leaves/teacher`, leaveData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      console.log('submitTeacherLeave response:', data);
       dispatch(fetchAllLeaves());
-      return data.leave; // Return only the leave object
+      return data;
     } catch (error) {
-      console.error('submitTeacherLeave error:', error.response?.data);
       return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
-    }
-  }
-);
-
-export const fetchLeaves = createAsyncThunk(
-  'leaves/fetchLeaves',
-  async (_, { rejectWithValue, getState }) => {
-    try {
-      const { auth } = getState();
-      const { data } = await axios.get(`${API_URL}/leaves/student`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      });
-      return data.leaves;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch leaves');
     }
   }
 );
@@ -57,16 +40,32 @@ export const fetchAllLeaves = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const { data } = await axios.get(`${API_URL}/leaves`, {
+      const { role, _id: userId } = getState().auth.user || {};
+      const url = role === 'Teacher' ? `${API_URL}/leaves?teacher=${userId}` : `${API_URL}/leaves`;
+      const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      console.log('Fetched leaves:', data.leaves);
       return data.leaves;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch all leaves');
     }
   }
 );
+
+// export const fetchAllLeaves = createAsyncThunk(
+//   'leaves/fetchAllLeaves',
+//   async (_, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const { data } = await axios.get(`${API_URL}/leaves`, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return data.leaves;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to fetch all leaves');
+//     }
+//   }
+// );
 
 export const updateLeaveStatus = createAsyncThunk(
   'leaves/updateLeaveStatus',
@@ -76,9 +75,24 @@ export const updateLeaveStatus = createAsyncThunk(
       const { data } = await axios.put(`${API_URL}/leaves/${id}`, { status }, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return data.leave; // Return only the updated leave object
+      return data.leave;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update leave status');
+    }
+  }
+);
+
+export const updateTeacherLeave = createAsyncThunk(
+  'leaves/updateTeacherLeave',
+  async ({ id, reason }, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const { data } = await axios.put(`${API_URL}/leaves/teacher/${id}`, { reason }, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return data.leave;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update leave reason');
     }
   }
 );
@@ -114,7 +128,7 @@ const leaveSlice = createSlice({
       })
       .addCase(submitStudentLeave.fulfilled, (state, action) => {
         state.loading = false;
-        state.leaves.push(action.payload);
+        state.leaves.push(action.payload.leave);
       })
       .addCase(submitStudentLeave.rejected, (state, action) => {
         state.loading = false;
@@ -124,23 +138,11 @@ const leaveSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(submitTeacherLeave.fulfilled, (state) => {
+      .addCase(submitTeacherLeave.fulfilled, (state, action) => {
         state.loading = false;
-        state.error = null;
+        state.leaves.push(action.payload.leave);
       })
       .addCase(submitTeacherLeave.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      .addCase(fetchLeaves.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchLeaves.fulfilled, (state, action) => {
-        state.loading = false;
-        state.leaves = action.payload;
-      })
-      .addCase(fetchLeaves.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -168,6 +170,21 @@ const leaveSlice = createSlice({
         );
       })
       .addCase(updateLeaveStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateTeacherLeave.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateTeacherLeave.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedLeave = action.payload;
+        state.leaves = state.leaves.map((leave) =>
+          leave._id === updatedLeave._id ? updatedLeave : leave
+        );
+      })
+      .addCase(updateTeacherLeave.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

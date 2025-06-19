@@ -6,7 +6,8 @@ import { fetchTeachers } from '../../redux/teacherSlice';
 import { fetchSubjects } from '../../redux/subjectSlice';
 import { fetchAllLeaves } from '../../redux/leaveSlice';
 import { fetchAttendanceSummary } from '../../redux/attendanceSummarySlice';
-import { fetchResultsSummary } from '../../redux/resultsSummarySlice';
+import { fetchResults } from '../../redux/resultSlice';
+import { fetchProfile } from '../../redux/authSlice';
 
 function AdminDashboard() {
   const dispatch = useDispatch();
@@ -15,19 +16,40 @@ function AdminDashboard() {
   const { subjects, loading: subjectsLoading, error: subjectsError } = useSelector((state) => state.subjects);
   const { leaves, loading: leavesLoading, error: leavesError } = useSelector((state) => state.leaves);
   const { data: attendanceData, loading: attendanceLoading, error: attendanceError } = useSelector((state) => state.attendanceSummary);
-  const { data: resultsData, loading: resultsLoading, error: resultsError } = useSelector((state) => state.resultsSummary);
+  const { results, loading: resultsLoading, error: resultsError } = useSelector((state) => state.results);
+  const { user, loading: authLoading, error: authError } = useSelector((state) => state.auth);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    dispatch(fetchStudents());
-    dispatch(fetchTeachers());
-    dispatch(fetchSubjects());
-    dispatch(fetchAllLeaves());
-    dispatch(fetchAttendanceSummary());
-    dispatch(fetchResultsSummary());
-  }, [dispatch]);
+    let isMounted = true;
+    const fetchData = async () => {
+      if (!user && !authLoading) {
+        // Attempt to fetch profile if user is not yet loaded
+        const profileAction = await dispatch(fetchProfile()).unwrap();
+        if (isMounted && fetchProfile.fulfilled.match(profileAction)) {
+          await fetchAllData();
+        }
+      } else if (user && isMounted) {
+        // Fetch data if user is already loaded
+        await fetchAllData();
+      }
+    };
 
-  // Ensure leaves is always an array, default to empty array if null or undefined
+    const fetchAllData = async () => {
+      await Promise.all([
+        dispatch(fetchStudents()),
+        dispatch(fetchTeachers()),
+        dispatch(fetchSubjects()),
+        dispatch(fetchAllLeaves()),
+        dispatch(fetchAttendanceSummary()),
+        dispatch(fetchResults()),
+      ]);
+    };
+
+    fetchData();
+    return () => { isMounted = false; };
+  }, [dispatch, user, authLoading]);
+
   const safeLeaves = Array.isArray(leaves) ? leaves : [];
   const summaryData = [
     { name: 'Students', count: students.length },
@@ -38,24 +60,28 @@ function AdminDashboard() {
 
   const handleRefresh = () => {
     setMessage('Refreshing data...');
-    Promise.all([
-      dispatch(fetchStudents()),
-      dispatch(fetchTeachers()),
-      dispatch(fetchSubjects()),
-      dispatch(fetchAllLeaves()),
-      dispatch(fetchAttendanceSummary()),
-      dispatch(fetchResultsSummary()),
-    ]).then(() => {
-      setMessage('Data refreshed successfully');
-      setTimeout(() => setMessage(''), 2000);
-    }).catch(() => {
-      setMessage('Failed to refresh some data');
-      setTimeout(() => setMessage(''), 5000);
+    dispatch(fetchProfile()).then((action) => {
+      if (fetchProfile.fulfilled.match(action)) {
+        Promise.all([
+          dispatch(fetchStudents()),
+          dispatch(fetchTeachers()),
+          dispatch(fetchSubjects()),
+          dispatch(fetchAllLeaves()),
+          dispatch(fetchAttendanceSummary()),
+          dispatch(fetchResults()),
+        ]).then(() => {
+          setMessage('Data refreshed successfully');
+          setTimeout(() => setMessage(''), 2000);
+        }).catch(() => {
+          setMessage('Failed to refresh some data');
+          setTimeout(() => setMessage(''), 5000);
+        });
+      }
     });
   };
 
-  const isLoading = studentsLoading || teachersLoading || subjectsLoading || leavesLoading;
-  const hasError = studentsError || teachersError || subjectsError || leavesError;
+  const isLoading = studentsLoading || teachersLoading || subjectsLoading || leavesLoading || resultsLoading || authLoading;
+  const hasError = studentsError || teachersError || subjectsError || leavesError || resultsError || authError;
 
   const BarChartComponent = ({ data, xKey, yKey, barColor }) => (
     <BarChart width={600} height={300} data={data}>
@@ -68,14 +94,33 @@ function AdminDashboard() {
     </BarChart>
   );
 
+  const passFailData = subjects.map((subject) => {
+    const subjectResults = results.filter((r) => r.subject === subject.title);
+    const passCount = subjectResults.filter((r) => r.marks >= 40).length;
+    const failCount = subjectResults.filter((r) => r.marks < 40).length;
+    return {
+      title: subject.title,
+      pass: passCount,
+      fail: failCount,
+    };
+  });
+
+  const attendanceChartData = [
+    {
+      name: 'Today',
+      present: attendanceData.present || 0,
+      absent: attendanceData.absent || 0,
+    },
+  ];
+
   return (
     <div className="flex-1 p-6 bg-gray-100">
       <div className="mb-4">
         <p className="text-blue-500">Home / Administrative Dashboard</p>
-        <h1 className="text-2xl font-bold">Administrative Dashboard</h1>
+        <h1 className="text-2xl font-bold">Administrative Dashboard - {user?.name || 'Admin'}</h1>
       </div>
 
-      {message && <p className="mb-4 text-gray-700">{message}</p>}
+      {message && <p className="mb-4 text-gray-500">{message}</p>}
 
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-teal-500 text-white p-4 rounded shadow">
@@ -108,7 +153,7 @@ function AdminDashboard() {
         {isLoading ? (
           <p className="text-gray-500">Loading summary data...</p>
         ) : hasError ? (
-          <p className="text-red-500">{studentsError || teachersError || subjectsError || leavesError}</p>
+          <p className="text-red-500">{studentsError || teachersError || subjectsError || leavesError || resultsError || authError || 'User role not available'}</p>
         ) : (
           <BarChartComponent data={summaryData} xKey="name" yKey="count" barColor="#8884d8" />
         )}
@@ -120,25 +165,35 @@ function AdminDashboard() {
           <p className="text-gray-500">Loading attendance data...</p>
         ) : attendanceError ? (
           <p className="text-red-500">{attendanceError}</p>
-        ) : Object.keys(attendanceData).some(key => attendanceData[key] > 0) ? (
-          <BarChartComponent data={[
-            { name: 'Present', count: attendanceData.present },
-            { name: 'Absent', count: attendanceData.absent },
-            { name: 'Late', count: attendanceData.late },
-          ]} xKey="name" yKey="count" barColor="#82ca9d" />
         ) : (
-          <p className="text-gray-500">No attendance data available</p>
+          <BarChart width={600} height={300} data={attendanceChartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="present" fill="#4CAF50" name="Present" />
+            <Bar dataKey="absent" fill="#F44336" name="Absent" />
+          </BarChart>
         )}
       </div>
 
       <div className="bg-white p-4 rounded shadow mb-6">
-        <h2 className="text-xl font-semibold mb-4">Average Marks per Subject</h2>
+        <h2 className="text-xl font-semibold mb-4">Pass/Fail Per Subject</h2>
         {resultsLoading ? (
           <p className="text-gray-500">Loading results data...</p>
         ) : resultsError ? (
-          <p className="text-red-500">{resultsError}</p>
-        ) : resultsData.length > 0 ? (
-          <BarChartComponent data={resultsData} xKey="subject" yKey="average" barColor="#ffc658" />
+          <p className="text-red-500">{resultsError || 'User role not available'}</p>
+        ) : results.length > 0 ? (
+          <BarChart width={600} height={300} data={passFailData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="title" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="pass" fill="#4CAF50" name="Pass" />
+            <Bar dataKey="fail" fill="#F44336" name="Fail" />
+          </BarChart>
         ) : (
           <p className="text-gray-500">No results data available</p>
         )}

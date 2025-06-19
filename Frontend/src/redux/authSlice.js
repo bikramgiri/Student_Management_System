@@ -65,14 +65,17 @@ export const fetchPotentialStudents = createAsyncThunk(
   }
 );
 
-export const fetchAdminProfile = createAsyncThunk(
-  'auth/fetchAdminProfile',
+// **fetch profile for all role
+export const fetchProfile = createAsyncThunk(
+  'auth/fetchProfile',
   async (_, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
       const response = await axios.get(`${API_URL}/auth/profile`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
+      localStorage.setItem('user', JSON.stringify(response.data.user)); // Sync localStorage
+      console.log('Profile fetched:', response.data.user); // Debug log
       return response.data.user;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch profile');
@@ -80,8 +83,9 @@ export const fetchAdminProfile = createAsyncThunk(
   }
 );
 
-export const updateAdminProfile = createAsyncThunk(
-  'auth/updateAdminProfile',
+// **update profile for all role
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
   async (formData, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
@@ -94,6 +98,66 @@ export const updateAdminProfile = createAsyncThunk(
     }
   }
 );
+
+// export const fetchAdminProfile = createAsyncThunk(
+//   'auth/fetchAdminProfile',
+//   async (_, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.get(`${API_URL}/auth/profile`, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data.user;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to fetch profile');
+//     }
+//   }
+// );
+
+// export const updateAdminProfile = createAsyncThunk(
+//   'auth/updateAdminProfile',
+//   async (formData, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.put(`${API_URL}/auth/profile`, formData, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+//     }
+//   }
+// );
+
+// export const fetchTeacherProfile = createAsyncThunk(
+//   'auth/fetchTeacherProfile',
+//   async (_, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.get(`${API_URL}/auth/profile`, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data.user;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to fetch profile');
+//     }
+//   }
+// );
+
+// export const updateTeacherProfile = createAsyncThunk(
+//   'auth/updateTeacherProfile',
+//   async (formData, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.put(`${API_URL}/auth/profile`, formData, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+//     }
+//   }
+// );
 
 const initialState = {
   user: JSON.parse(localStorage.getItem('user')) || null,
@@ -173,32 +237,32 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      .addCase(fetchAdminProfile.pending, (state) => {
+      .addCase(fetchProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchAdminProfile.fulfilled, (state, action) => {
+      .addCase(fetchProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
       })
-      .addCase(fetchAdminProfile.rejected, (state, action) => {
+      .addCase(fetchProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-      .addCase(updateAdminProfile.pending, (state) => {
+      .addCase(updateProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateAdminProfile.fulfilled, (state, action) => {
+      .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
         localStorage.setItem('token', action.payload.token);
       })
-      .addCase(updateAdminProfile.rejected, (state, action) => {
+      .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
   },
 });
 

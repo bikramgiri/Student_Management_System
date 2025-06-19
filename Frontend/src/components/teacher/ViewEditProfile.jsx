@@ -10,8 +10,9 @@ function ViewEditProfile() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Admin',
-    password: '', // Add password field
+    role: '',
+    password: '',
+    address: '',
   });
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState('');
@@ -25,8 +26,9 @@ function ViewEditProfile() {
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        role: user.role || 'Admin',
-        password: '', // Always start with empty password
+        role: user.role || '',
+        password: '',
+        address: user.address || '',
       });
     } else {
       navigate('/login');
@@ -49,7 +51,7 @@ function ViewEditProfile() {
         setIsEditing(false);
         setTimeout(() => {
           setMessage('');
-          navigate('/admin/dashboard');
+          navigate('/teacher/dashboard');
         }, 3000);
       } else {
         setMessage(result.payload || 'Failed to update profile');
@@ -63,8 +65,9 @@ function ViewEditProfile() {
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        role: user.role || 'Admin',
+        role: user.role || '',
         password: '',
+        address: user.address || '',
       });
     }
   };
@@ -102,6 +105,10 @@ function ViewEditProfile() {
             <label className="block text-sm font-medium text-gray-700">Role</label>
             <p className="mt-1 text-gray-900">{formData.role}</p>
           </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">Address</label>
+            <p className="mt-1 text-gray-900">{formData.address || 'Not provided'}</p>
+          </div>
 
           {isEditing ? (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -133,6 +140,16 @@ function ViewEditProfile() {
                   type="password"
                   name="password"
                   value={formData.password}
+                  onChange={handleChange}
+                  className="mt-1 block w-full border p-2 rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
                   onChange={handleChange}
                   className="mt-1 block w-full border p-2 rounded"
                 />

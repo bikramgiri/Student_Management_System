@@ -1,9 +1,9 @@
 // src/components/student/StudentDashboard.jsx
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { submitStudentLeave, fetchLeaves } from '../../redux/leaveSlice';
+import { submitStudentLeave, fetchAllLeaves } from '../../redux/leaveSlice';
 import { fetchResults } from '../../redux/resultSlice';
-import { fetchAttendance } from '../../redux/attendanceSlice';
+import { fetchAttendanceRecords } from '../../redux/attendanceSlice';
 
 function StudentDashboard() {
   const dispatch = useDispatch();
@@ -23,8 +23,8 @@ function StudentDashboard() {
   const fetchData = useCallback(() => {
     console.log('Fetching initial data');
     dispatch(fetchResults());
-    dispatch(fetchAttendance());
-    dispatch(fetchLeaves());
+    dispatch(fetchAttendanceRecords());
+    dispatch(fetchAllLeaves());
   }, [dispatch]);
 
   useEffect(() => {
@@ -100,7 +100,7 @@ function StudentDashboard() {
         if (result.meta.requestStatus === 'fulfilled') {
           setMessage('Leave application submitted successfully!');
           setLeaveForm({ date: '', reason: '', admin: ADMIN_ID });
-          dispatch(fetchLeaves());
+          dispatch(fetchAllLeaves());
         } else {
           console.error('Submit leave error:', result.payload); // Log for debugging
           setMessage(`Failed to submit leave: ${result.payload}`);
@@ -111,7 +111,7 @@ function StudentDashboard() {
 
     const handleRefresh = useCallback(() => {
       setMessage('Refreshing leave status...');
-      dispatch(fetchLeaves()).then((result) => {
+      dispatch(fetchAllLeaves()).then((result) => {
         if (result.meta.requestStatus === 'fulfilled') {
           setMessage('Leave status refreshed successfully');
           setTimeout(() => setMessage(''), 2000);
