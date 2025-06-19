@@ -1,6 +1,6 @@
-// controllers/teacherController.js
 const Teacher = require('../models/Teacher');
 const User = require('../models/User');
+const Leave = require('../models/Leave');
 
 exports.getTeachers = async (req, res) => {
   try {
@@ -31,7 +31,7 @@ exports.getAvailableTeachers = async (req, res) => {
     const assignedUserIds = teachers.map(t => t.user.toString());
     const availableTeachers = await User.find({
       _id: { $nin: assignedUserIds },
-      role: { $ne: 'Admin' }, // Exclude admins
+      role: { $ne: 'Admin' },
     }).select('name email _id');
     res.status(200).json({ teachers: availableTeachers });
   } catch (error) {
@@ -67,16 +67,14 @@ exports.updateTeacher = async (req, res) => {
       return res.status(400).json({ message: 'Address and contact number are required' });
     }
 
-    // Update User data
     if (userId && (name || email || password)) {
       const updateUserData = {};
       if (name) updateUserData.name = name;
       if (email) updateUserData.email = email;
-      if (password) updateUserData.password = password; // Assumes pre-save hook hashes password
+      if (password) updateUserData.password = password;
       await User.findByIdAndUpdate(userId, updateUserData, { new: true, runValidators: true });
     }
 
-    // Update Teacher data
     const updatedTeacher = await Teacher.findByIdAndUpdate(
       id,
       { address, contactNumber },
@@ -99,6 +97,18 @@ exports.deleteTeacher = async (req, res) => {
       return res.status(404).json({ message: 'Teacher not found' });
     }
     res.status(200).json({ message: 'Teacher deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.getTeacherLeaves = async (req, res) => {
+  try {
+    const { _id: teacherId } = req.user;
+    const leaves = await Leave.find({ teacher: teacherId })
+      .populate('teacher', 'name email')
+      .populate('admin', 'name email');
+    res.status(200).json({ leaves });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

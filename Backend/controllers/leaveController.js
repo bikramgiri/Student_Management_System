@@ -1,4 +1,3 @@
-// controllers/leaveController.js
 const Leave = require('../models/Leave');
 const User = require('../models/User');
 
@@ -45,8 +44,6 @@ exports.submitStudentLeave = async (req, res) => {
     console.log('Leave object created:', leave);
     await leave.save();
     console.log('Leave saved');
-    // await leave.populate('student', 'name email').populate('admin', 'name email');
-    console.log('Leave populated');
 
     res.status(201).json({ message: 'Leave submitted successfully', leave });
   } catch (error) {
@@ -61,21 +58,18 @@ exports.submitTeacherLeave = async (req, res) => {
     console.log('submitTeacherLeave: Starting, req.user:', req.user, 'req.body:', req.body);
     const { role, _id: teacherId } = req.user;
 
-    // Role check
     if (role !== 'Teacher') {
       return res.status(403).json({ message: 'Forbidden: Only Teachers can submit leave applications' });
     }
 
-    // Destructure and validate request body
     const { date, reason } = req.body;
     if (!date || !reason || typeof reason !== 'string' || reason.trim() === '') {
       return res.status(400).json({ message: 'Date and a non-empty reason are required' });
     }
 
-    // Validate date format and ensure it's not in the past
     const parsedDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    const today = new Date('2025-06-19T13:10:00+05:45');
+    today.setHours(0, 0, 0, 0);
     if (isNaN(parsedDate.getTime())) {
       return res.status(400).json({ message: 'Invalid date format' });
     }
@@ -83,19 +77,16 @@ exports.submitTeacherLeave = async (req, res) => {
       return res.status(400).json({ message: 'Leave date cannot be in the past' });
     }
 
-    // Optional: Limit reason length
     const trimmedReason = reason.trim();
     if (trimmedReason.length > 500) {
       return res.status(400).json({ message: 'Reason cannot exceed 500 characters' });
     }
 
-    // Check for duplicate leave request
     const existingLeave = await Leave.findOne({ teacher: teacherId, date: parsedDate });
     if (existingLeave) {
       return res.status(400).json({ message: 'Leave already requested for this date' });
     }
 
-    // Create and save leave record with status
     const leave = new Leave({
       teacher: teacherId,
       date: parsedDate,
@@ -104,10 +95,8 @@ exports.submitTeacherLeave = async (req, res) => {
     });
     await leave.save();
 
-    // Populate teacher data
     await leave.populate('teacher', 'name email');
 
-    // Return success response with populated data
     res.status(201).json({
       message: 'Leave application submitted successfully',
       leave: {
@@ -131,26 +120,38 @@ exports.submitTeacherLeave = async (req, res) => {
 
 exports.getAllLeaves = async (req, res) => {
   try {
-    // const { role } = req.user;
-    // if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can view all leaves' });
+    const { role, _id: userId } = req.user;
+    let query = {};
 
-    const leaves = await Leave.find()
+    if (role === 'Teacher') {
+      query.teacher = userId; // Filter by the teacher's ID
+    } else if (role === 'Student') {
+      query.student = userId; // Filter by the student's ID
+    } // Admins see all leaves
+
+    const leaves = await Leave.find(query)
       .populate('student', 'name email')
       .populate('teacher', 'name email')
       .populate('admin', 'name email');
-  console.log('Leaves fetched:', leaves.map(l => ({
-  _id: l._id,
-  teacher: l.teacher?._id,
-  student: l.student?._id,
-  date: l.date,
-  status: l.status
-})));
     res.status(200).json({ leaves });
   } catch (error) {
     console.error('Error fetching all leaves:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// exports.getAllLeaves = async (req, res) => {
+//   try {
+//     const leaves = await Leave.find()
+//       .populate('student', 'name email')
+//       .populate('teacher', 'name email')
+//       .populate('admin', 'name email');
+//     res.status(200).json({ leaves });
+//   } catch (error) {
+//     console.error('Error fetching all leaves:', error.message);
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
 
 exports.updateLeaveStatus = async (req, res) => {
   try {
@@ -177,6 +178,54 @@ exports.updateLeaveStatus = async (req, res) => {
   } catch (error) {
     console.error('Error updating leave status:', error.message);
     if (error.name === 'CastError') return res.status(400).json({ message: 'Invalid leave ID' });
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.updateTeacherLeave = async (req, res) => {
+  try {
+    const { role, _id: teacherId } = req.user;
+    if (role !== 'Teacher') {
+      return res.status(403).json({ message: 'Forbidden: Only Teachers can update leave reason' });
+    }
+
+    const { id } = req.params;
+    const { reason } = req.body;
+    if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+      return res.status(400).json({ message: 'A non-empty reason is required' });
+    }
+
+    const trimmedReason = reason.trim();
+    if (trimmedReason.length > 500) {
+      return res.status(400).json({ message: 'Reason cannot exceed 500 characters' });
+    }
+
+    const leave = await Leave.findOne({ _id: id, teacher: teacherId });
+    if (!leave) {
+      return res.status(404).json({ message: 'Leave not found or unauthorized' });
+    }
+
+    leave.reason = trimmedReason;
+    await leave.save();
+
+    await leave.populate('teacher', 'name email');
+
+    res.status(200).json({
+      message: 'Leave reason updated successfully',
+      leave: {
+        _id: leave._id,
+        teacher: leave.teacher,
+        date: leave.date,
+        reason: leave.reason,
+        status: leave.status,
+        createdAt: leave.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating leave:', error.message);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid leave ID' });
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

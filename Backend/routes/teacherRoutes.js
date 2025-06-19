@@ -6,7 +6,7 @@ const {
   updateTeacher,
   deleteTeacher,
   getPotentialTeachers,
-  getAvailableTeachers, // Add this
+  getAvailableTeachers,
 } = require('../controllers/teacherController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -15,6 +15,6 @@ router.post('/', authMiddleware, addTeacher);
 router.put('/:id', authMiddleware, updateTeacher);
 router.delete('/:id', authMiddleware, deleteTeacher);
 router.get('/potential', authMiddleware, getPotentialTeachers);
-router.get('/available', authMiddleware, getAvailableTeachers); // Add this route
+router.get('/available', authMiddleware, getAvailableTeachers);
 
 module.exports = router;

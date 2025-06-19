@@ -92,31 +92,33 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.fetchAdminProfile = async (req, res) => {
+//** fetch profile for all role
+exports.fetchProfile = async (req, res) => {
   try {
-    const { _id } = req.user;
-    const user = await User.findById(_id).select('name email role');
-    if (!user || user.role !== 'Admin') {
-      return res.status(404).json({ message: 'Admin profile not found' });
+    const { _id } = req.user; // Extracted by authMiddleware from JWT
+    const user = await User.findById(_id).select('name email role address');
+    if (!user) {
+      return res.status(404).json({ message: 'Profile not found' });
     }
     res.status(200).json({ user });
   } catch (error) {
-    console.error('Error fetching admin profile:', error.message);
+    console.error('Error fetching profile:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-exports.updateAdminProfile = async (req, res) => {
+//** update profile for all role
+exports.updateProfile = async (req, res) => {
   try {
-    const { _id } = req.user;
-    const { name, email, password } = req.body;
+    const { _id } = req.user; // From JWT via authMiddleware
+    const { name, email, password, address } = req.body;
 
     // Validate input
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required' });
     }
 
-    // Check if email is valid
+    // Check email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Invalid email format' });
@@ -124,15 +126,18 @@ exports.updateAdminProfile = async (req, res) => {
 
     // Find the user
     const user = await User.findById(_id);
-    if (!user || user.role !== 'Admin') {
-      return res.status(404).json({ message: 'Admin profile not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'Profile not found' });
     }
 
     // Update fields
     user.name = name;
     user.email = email;
     if (password && password.trim() !== '') {
-      user.password = password; // Will be hashed by pre-save hook
+      user.password = password; // Hashed by pre-save hook
+    }
+    if (address) {
+      user.address = address;
     }
 
     await user.save();
@@ -146,14 +151,14 @@ exports.updateAdminProfile = async (req, res) => {
 
     res.status(200).json({
       message: 'Profile updated successfully',
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, address: user.address },
       token,
     });
   } catch (error) {
-    console.error('Error updating admin profile:', error.message);
+    console.error('Error updating profile:', error.message);
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
-      return res.status(400).json({ message: 'Password must be at least 6 characters', details: errors });
+      return res.status(400).json({ message: 'Validation failed', details: errors });
     }
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Email already in use' });
@@ -161,6 +166,150 @@ exports.updateAdminProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+
+// exports.fetchAdminProfile = async (req, res) => {
+//   try {
+//     const { _id } = req.user;
+//     const user = await User.findById(_id).select('name email role');
+//     if (!user || user.role !== 'Admin') {
+//       return res.status(404).json({ message: 'Admin profile not found' });
+//     }
+//     res.status(200).json({ user });
+//   } catch (error) {
+//     console.error('Error fetching admin profile:', error.message);
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
+
+// exports.updateAdminProfile = async (req, res) => {
+//   try {
+//     const { _id } = req.user;
+//     const { name, email, password } = req.body;
+
+//     // Validate input
+//     if (!name || !email) {
+//       return res.status(400).json({ message: 'Name and email are required' });
+//     }
+
+//     // Check if email is valid
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     if (!emailRegex.test(email)) {
+//       return res.status(400).json({ message: 'Invalid email format' });
+//     }
+
+//     // Find the user
+//     const user = await User.findById(_id);
+//     if (!user || user.role !== 'Admin') {
+//       return res.status(404).json({ message: 'Admin profile not found' });
+//     }
+
+//     // Update fields
+//     user.name = name;
+//     user.email = email;
+//     if (password && password.trim() !== '') {
+//       user.password = password; // Will be hashed by pre-save hook
+//     }
+
+//     await user.save();
+
+//     // Generate new token with updated data
+//     const token = jwt.sign(
+//       { _id: user._id, email: user.email, role: user.role },
+//       process.env.JWT_SECRET || 'your-secret-key',
+//       { expiresIn: '1d' }
+//     );
+
+//     res.status(200).json({
+//       message: 'Profile updated successfully',
+//       user: { _id: user._id, name: user.name, email: user.email, role: user.role },
+//       token,
+//     });
+//   } catch (error) {
+//     console.error('Error updating admin profile:', error.message);
+//     if (error.name === 'ValidationError') {
+//       const errors = Object.values(error.errors).map((err) => err.message);
+//       return res.status(400).json({ message: 'Password must be at least 6 characters', details: errors });
+//     }
+//     if (error.code === 11000) {
+//       return res.status(400).json({ message: 'Email already in use' });
+//     }
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
+
+// exports.fetchTeacherProfile = async (req, res) => {
+//   try {
+//     const { _id } = req.user;
+//     const user = await User.findById(_id).select('name email role address');
+//     if (!user || user.role !== 'Teacher') {
+//       return res.status(404).json({ message: 'Teacher profile not found' });
+//     }
+//     res.status(200).json({ user });
+//   } catch (error) {
+//     console.error('Error fetching teacher profile:', error.message);
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
+
+// exports.updateTeacherProfile = async (req, res) => {
+//   try {
+//     const { _id } = req.user;
+//     const { name, email, password, address } = req.body;
+
+//     // Validate input
+//     if (!name || !email) {
+//       return res.status(400).json({ message: 'Name and email are required' });
+//     }
+
+//     // Check if email is valid
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     if (!emailRegex.test(email)) {
+//       return res.status(400).json({ message: 'Invalid email format' });
+//     }
+
+//     // Find the user
+//     const user = await User.findById(_id);
+//     if (!user || user.role !== 'Teacher') {
+//       return res.status(404).json({ message: 'Teacher profile not found' });
+//     }
+
+//     // Update fields
+//     user.name = name;
+//     user.email = email;
+//     if (password && password.trim() !== '') {
+//       user.password = password; // Will be hashed by pre-save hook
+//     }
+//     if (address) {
+//       user.address = address;
+//     }
+
+//     await user.save();
+
+//     // Generate new token with updated data
+//     const token = jwt.sign(
+//       { _id: user._id, email: user.email, role: user.role },
+//       process.env.JWT_SECRET || 'your-secret-key',
+//       { expiresIn: '1d' }
+//     );
+
+//     res.status(200).json({
+//       message: 'Profile updated successfully',
+//       user: { _id: user._id, name: user.name, email: user.email, role: user.role, address: user.address },
+//       token,
+//     });
+//   } catch (error) {
+//     console.error('Error updating teacher profile:', error.message);
+//     if (error.name === 'ValidationError') {
+//       const errors = Object.values(error.errors).map((err) => err.message);
+//       return res.status(400).json({ message: 'Password must be at least 6 characters', details: errors });
+//     }
+//     if (error.code === 11000) {
+//       return res.status(400).json({ message: 'Email already in use' });
+//     }
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
 
 exports.updateUser = async (req, res) => {
   try {
