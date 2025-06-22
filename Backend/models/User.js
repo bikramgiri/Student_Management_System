@@ -31,6 +31,17 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Role is required'],
   },
   address: { type: String, trim: true }, // Added address
+  subjects: { // New field for teachers
+    type: [String],
+    required: function() { return this.role === 'Teacher'; }, // Required only for teachers
+    default: [],
+    validate: {
+      validator: function(v) {
+        return this.role === 'Teacher' ? v.length > 0 : true; // Ensure at least one subject for teachers
+      },
+      message: 'Teachers must have at least one subject',
+    },
+  },
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },

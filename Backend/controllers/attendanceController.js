@@ -9,9 +9,9 @@ exports.submitAttendance = async (req, res) => {
       return res.status(403).json({ message: 'Forbidden: Only Teachers can submit attendance' });
     }
 
-    const { date, records } = req.body;
-    if (!date || !records || typeof records !== 'object') {
-      return res.status(400).json({ message: 'Date and records are required and records must be an object' });
+    const { date, records, subject } = req.body;
+    if (!date || !records || typeof records !== 'object' || !subject) {
+      return res.status(400).json({ message: 'Date, subject and records are required and records must be an object' });
     }
 
     const parsedDate = new Date(date);
@@ -28,6 +28,7 @@ exports.submitAttendance = async (req, res) => {
     const existingAttendance = await Attendance.findOne({
       date: parsedDate,
       teacher: teacherId,
+      subject,
       'records.student': { $in: studentIds },
     });
 
@@ -45,6 +46,7 @@ exports.submitAttendance = async (req, res) => {
     const attendance = new Attendance({
       date: parsedDate,
       teacher: teacherId,
+      subject,
       records: recordsArray,
     });
     await attendance.save();
@@ -55,6 +57,7 @@ exports.submitAttendance = async (req, res) => {
         _id: attendance._id,
         date: attendance.date,
         teacher: attendance.teacher,
+        subject: attendance.subject,
         records: attendance.records,
       },
     });
@@ -72,14 +75,36 @@ exports.getStudentAttendance = async (req, res) => {
     const { role, _id: studentId } = req.user;
     if (role !== 'Student') return res.status(403).json({ message: 'Forbidden' });
 
-    const attendance = await Attendance.find({ 'records.student': studentId })
+    const attendances = await Attendance.find({ 'records.student': studentId })
       .populate('teacher', 'name email')
       .populate('records.student', 'name email');
-    res.status(200).json({ attendance });
+
+    const studentAttendance = attendances.map(att => ({
+      _id: att._id,
+      date: att.date,
+      subject: att.subject, // Ensure subject is included
+      records: att.records.filter(record => record.student._id.toString() === studentId.toString()),
+    }));
+
+    res.status(200).json({ attendance: studentAttendance });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// exports.getStudentAttendance = async (req, res) => {
+//   try {
+//     const { role, _id: studentId } = req.user;
+//     if (role !== 'Student') return res.status(403).json({ message: 'Forbidden' });
+
+//     const attendance = await Attendance.find({ 'records.student': studentId })
+//       .populate('teacher', 'name email')
+//       .populate('records.student', 'name email');
+//     res.status(200).json({ attendance });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
 
 exports.getAttendanceSummary = async (req, res) => {
   try {
@@ -198,12 +223,13 @@ exports.getTeacherAttendance = async (req, res) => {
 exports.updateAttendance = async (req, res) => {
   try {
     const { attId } = req.params;
-    const { studentId, status } = req.body;
+    const { studentId, status, subject } = req.body;
     const attendance = await Attendance.findById(attId);
     if (!attendance) return res.status(404).json({ message: 'Attendance record not found' });
     const record = attendance.records.find((rec) => rec.student.toString() === studentId);
     if (!record) return res.status(404).json({ message: 'Student record not found' });
     record.status = status;
+    if (subject) attendance.subject = subject; // Update subject if provided
     await attendance.save();
     res.status(200).json({ message: 'Attendance updated', attendance });
   } catch (error) {

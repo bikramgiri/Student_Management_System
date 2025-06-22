@@ -31,10 +31,13 @@ exports.submitStudentLeave = async (req, res) => {
     console.log('Request body:', { date, reason, admin });
     if (!date || !reason || !admin) return res.status(400).json({ message: 'Date, reason, and admin are required' });
 
-    const parsedDate = new Date(date);
+const parsedDate = new Date(date);
     console.log('Parsed date:', parsedDate);
     if (isNaN(parsedDate.getTime())) return res.status(400).json({ message: 'Invalid date format' });
-    if (parsedDate < new Date().setHours(0, 0, 0, 0)) return res.status(400).json({ message: 'Date cannot be in the past' });
+    // Allow current day or future dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (parsedDate < today) return res.status(400).json({ message: 'Date cannot be in the past' });
 
     const adminUser = await User.findById(admin);
     console.log('Admin user found:', adminUser);
@@ -47,7 +50,10 @@ exports.submitStudentLeave = async (req, res) => {
 
     res.status(201).json({ message: 'Leave submitted successfully', leave });
   } catch (error) {
-    console.error('Error submitting leave:', error.message);
+console.error('Error submitting leave:', error.message);
+    if (error.name === 'ReferenceError') {
+      return res.status(500).json({ message: 'Internal server error: Missing student ID' });
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -230,10 +236,61 @@ exports.updateTeacherLeave = async (req, res) => {
   }
 };
 
+exports.updateStudentLeave = async (req, res) => {
+  try {
+    const { role, _id: studentId } = req.user;
+    if (role !== 'Student') {
+      return res.status(403).json({ message: 'Forbidden: Only students can update their leave reason' });
+    }
+
+    const { id } = req.params;
+    const { reason } = req.body;
+    if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+      return res.status(400).json({ message: 'A non-empty reason is required' });
+    }
+
+    const trimmedReason = reason.trim();
+    if (trimmedReason.length > 500) {
+      return res.status(400).json({ message: 'Reason cannot exceed 500 characters' });
+    }
+
+    const leave = await Leave.findOne({ _id: id, student: studentId });
+    if (!leave) {
+      return res.status(404).json({ message: 'Leave not found or unauthorized' });
+    }
+
+    leave.reason = trimmedReason;
+    await leave.save();
+
+    // Correct population: Use a single populate call with multiple fields
+    await leave.populate('student','name email')
+      // await leave.populate('teacher', 'name email');
+
+
+    res.status(200).json({
+      message: 'Leave reason updated successfully',
+      leave: {
+        _id: leave._id,
+        student: leave.student,
+        date: leave.date,
+        reason: leave.reason,
+        status: leave.status,
+        createdAt: leave.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating leave:', error.message);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Invalid leave ID' });
+    }
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 exports.deleteLeave = async (req, res) => {
   try {
     const { role } = req.user;
-    if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can delete leaves' });
+    // if (role !== 'Admin') return res.status(403).json({ message: 'Forbidden: Only admins can delete leaves' });
 
     const leave = await Leave.findByIdAndDelete(req.params.id)
       .populate('student', 'name email')

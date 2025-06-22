@@ -6,8 +6,8 @@ const jwt = require('jsonwebtoken');
 exports.signup = async (req, res) => {
   console.log('Signup request received with body:', req.body);
   try {
-    const { name, email, password, role, address } = req.body;
-    if (!name || !email || !password) {
+    const { name, email, password, role, address, subjects } = req.body;
+    if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'All fields (name, email, password, role) are required' });
     }
 
@@ -17,11 +17,11 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: `Email ${email} already registered for role ${role}` });
     }
 
-    const newUser = new User({ name, email, password, role, address });
+    const newUser = new User({ name, email, password, role, address, subjects: role === 'Teacher' ? subjects || [] : [] });
     await newUser.save(); // Password hashed via pre-save hook
 
     const token = jwt.sign(
-      { _id: newUser._id, role: newUser.role },
+      { _id: newUser._id, role: newUser.role, subjects: newUser.subjects },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '2d' }
     );
@@ -29,7 +29,7 @@ exports.signup = async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: { _id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role, address: newUser.address },
+      user: { _id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role, address: newUser.address, subjects: newUser.subjects },
     });
   } catch (error) {
     console.error('Signup Error:', error.message);
@@ -76,15 +76,15 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { _id: matchedUser._id, role: matchedUser.role },
+      { _id: matchedUser._id, role: matchedUser.role, subjects: matchedUser.role === 'Teacher' ? matchedUser.subjects : [] },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '1d' }
+      { expiresIn: '2d' }
     );
 
     res.status(200).json({
       message: 'Login successful',
       token,
-      user: { _id: matchedUser._id, name: matchedUser.name, email: matchedUser.email, role: matchedUser.role },
+      user: { _id: matchedUser._id, name: matchedUser.name, email: matchedUser.email, role: matchedUser.role, subjects: matchedUser.role === 'Teacher' ? matchedUser.subjects : [] },
     });
   } catch (error) {
     console.error('Login Error:', error.message);
@@ -96,7 +96,7 @@ exports.login = async (req, res) => {
 exports.fetchProfile = async (req, res) => {
   try {
     const { _id } = req.user; // Extracted by authMiddleware from JWT
-    const user = await User.findById(_id).select('name email role address');
+    const user = await User.findById(_id).select('name email role address subjects');
     if (!user) {
       return res.status(404).json({ message: 'Profile not found' });
     }
@@ -111,7 +111,7 @@ exports.fetchProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { _id } = req.user; // From JWT via authMiddleware
-    const { name, email, password, address } = req.body;
+    const { name, email, password, address, subjects } = req.body;
 
     // Validate input
     if (!name || !email) {
@@ -139,19 +139,22 @@ exports.updateProfile = async (req, res) => {
     if (address) {
       user.address = address;
     }
+    if (user.role === 'Teacher' && subjects) {
+      user.subjects = subjects; // Update subjects for teachers
+    }
 
     await user.save();
 
     // Generate new token with updated data
     const token = jwt.sign(
-      { _id: user._id, email: user.email, role: user.role },
+      { _id: user._id, email: user.email, role: user.role, subjects: user.role === 'Teacher' ? user.subjects : [] },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '1d' }
+      { expiresIn: '2d' }
     );
 
     res.status(200).json({
       message: 'Profile updated successfully',
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, address: user.address },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role, address: user.address, subjects: user.role === 'Teacher' ? user.subjects : [] },
       token,
     });
   } catch (error) {
@@ -325,7 +328,7 @@ exports.updateUser = async (req, res) => {
     const { userId } = req.params;
     
     // Get update data from request body
-    const { name, email, password, address } = req.body;
+    const { name, email, password, address, subjects } = req.body;
 
     // Build update object with only provided fields
     const updateData = {};
@@ -333,6 +336,7 @@ exports.updateUser = async (req, res) => {
     if (email) updateData.email = email;
     if (password) updateData.password = password; // Note: Ensure password hashing if needed
     if (address) updateData.address = address;
+    if (subjects !== undefined) updateData.subjects = subjects;
 
     // Update the user in the database
     const updatedUser = await User.findByIdAndUpdate(
