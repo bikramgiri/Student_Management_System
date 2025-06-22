@@ -9,12 +9,12 @@ function TeacherLayout() {
   return (
     <div className="flex min-h-screen">
       <div className="w-64 bg-gray-800 text-white p-4">
-        <h2 className="text-xl font-bold mb-6">TEACHER PANEL</h2>
+        <h2 className="text-xl font-bold mb-6 ml-8">TEACHER PANEL</h2>
         <div className="mb-4">
-          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mb-4 ml-10 text-xl font-bold text-white">
+          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mb-4 ml-20 text-xl font-bold text-white">
             {initial}
           </div>
-          <h2 className="text-xl font-bold mb-2 ml-6">Teacher</h2>
+          <h2 className="text-xl font-bold mb-2 ml-18">Teacher</h2>
         </div>
         <nav className="space-y-2">
           <Link to="/teacher/dashboard" className="block bg-blue-600 p-2 rounded">Home</Link>

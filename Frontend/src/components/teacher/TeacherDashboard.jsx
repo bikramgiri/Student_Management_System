@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   PieChart,
@@ -27,6 +27,7 @@ function TeacherDashboard() {
   const { results, loading: resultsLoading, error: resultsError } = useSelector((state) => state.results);
   const userName = useSelector((state) => state.auth.user?.name || 'Teacher');
   const userRole = useSelector((state) => state.auth.user?.role || 'Computer Science');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     dispatch(fetchAttendanceSummary());
@@ -36,13 +37,29 @@ function TeacherDashboard() {
     dispatch(fetchResults());
   }, [dispatch]);
 
+  const handleRefresh = () => {
+    setMessage('Refreshing data...');
+    Promise.all([
+      dispatch(fetchAttendanceSummary()),
+      dispatch(fetchSubjects()),
+      dispatch(fetchStudentsForAttendance()),
+      dispatch(fetchAllLeaves()),
+      dispatch(fetchResults()),
+    ]).then(() => {
+      setMessage('Data refreshed successfully');
+      setTimeout(() => setMessage(''), 2000);
+    }).catch(() => {
+      setMessage('Failed to refresh some data');
+      setTimeout(() => setMessage(''), 5000);
+    });
+  };
+
   if (attendanceLoading || subjectsLoading || studentsLoading || leavesLoading || resultsLoading) return <p>Loading...</p>;
 
   const totalStudents = students.length;
   const totalSubjects = subjects.length;
   const totalLeaveApplied = leaves.filter((l) => l.status === 'Pending').length;
 
-  // Custom color array for PieChart
   const COLORS = ['#4CAF50', '#F44336'];
 
   const pieData = [
@@ -50,7 +67,6 @@ function TeacherDashboard() {
     { name: 'Absent', value: attendanceSummary.absent || 0 },
   ];
 
-  // Calculate pass/fail counts per subject
   const passFailData = subjects.map((subject) => {
     const subjectResults = results.filter((r) => r.subject === subject.title);
     const passCount = subjectResults.filter((r) => r.marks >= 40).length;
@@ -65,27 +81,39 @@ function TeacherDashboard() {
   const totalAttendanceTaken = (attendanceSummary.present || 0) + (attendanceSummary.absent || 0);
 
   return (
-    <div>
+    <div className="p-6 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold mb-4">Teacher Panel - {userName} ({userRole})</h1>
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-blue-200 p-4 rounded">
+
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-400 p-4 rounded">
           <h2>Total Students</h2>
           <p className="text-2xl">{totalStudents}</p>
         </div>
-        <div className="bg-green-200 p-4 rounded">
+        <div className="bg-green-400 p-4 rounded">
           <h2>Total Attendance Taken</h2>
           <p className="text-2xl">{totalAttendanceTaken}</p>
         </div>
-        <div className="bg-yellow-200 p-4 rounded">
+        <div className="bg-yellow-400 p-4 rounded">
           <h2>Total Leave Applied</h2>
           <p className="text-2xl">{totalLeaveApplied}</p>
         </div>
-        <div className="bg-red-200 p-4 rounded">
+        <div className="bg-red-400 p-4 rounded">
           <h2>Total Subjects</h2>
           <p className="text-2xl">{totalSubjects}</p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-4">
+
+      <div className="mb-6">
+        {message && <p className="text-gray-500 mb-2">{message}</p>}
+        <button
+          onClick={handleRefresh}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Refresh Data
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded shadow">
           <h3>Attendance Summary</h3>
           <div className="flex justify-between mb-4">

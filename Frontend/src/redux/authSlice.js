@@ -86,18 +86,35 @@ export const fetchProfile = createAsyncThunk(
 // **update profile for all role
 export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
-  async (formData, { rejectWithValue, getState }) => {
+  async (formData, { rejectWithValue, getState, dispatch }) => {
     try {
       const { auth } = getState();
       const response = await axios.put(`${API_URL}/auth/profile`, formData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
+      // After a successful update, dispatch fetchProfile to refresh the auth state
+      dispatch(fetchProfile());
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
     }
   }
 );
+
+// export const updateProfile = createAsyncThunk(
+//   'auth/updateProfile',
+//   async (formData, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.put(`${API_URL}/auth/profile`, formData, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+//     }
+//   }
+// );
 
 // export const fetchAdminProfile = createAsyncThunk(
 //   'auth/fetchAdminProfile',
@@ -155,6 +172,22 @@ export const updateProfile = createAsyncThunk(
 //       return response.data;
 //     } catch (error) {
 //       return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+//     }
+//   }
+// );
+
+// **fetch subjects for teacher (new action)
+// export const fetchSubjects = createAsyncThunk(
+//   'subjects/fetchSubjects',
+//   async (_, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.get(`${API_URL}/subjects`, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data.subjects;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to fetch subjects');
 //     }
 //   }
 // );
@@ -244,6 +277,7 @@ const authSlice = createSlice({
       .addCase(fetchProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
+        localStorage.setItem('user', JSON.stringify(action.payload));
       })
       .addCase(fetchProfile.rejected, (state, action) => {
         state.loading = false;
@@ -258,11 +292,24 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+      // .addCase(fetchSubjects.pending, (state) => {
+      //   state.loading = true;
+      //   state.error = null;
+      // })
+      // .addCase(fetchSubjects.fulfilled, (state, action) => {
+      //   state.loading = false;
+      //   state.subjects = action.payload; // Assuming you want to store subjects in auth state
+      // })
+      // .addCase(fetchSubjects.rejected, (state, action) => {
+      //   state.loading = false;
+      //   state.error = action.payload;
+      // });
   },
 });
 

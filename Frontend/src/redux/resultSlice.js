@@ -35,6 +35,7 @@ export const submitResult = createAsyncThunk(
 //   }
 // );
 
+
 export const fetchResults = createAsyncThunk(
   'results/fetchResults',
   async (_, { rejectWithValue, getState, dispatch }) => {
@@ -52,18 +53,76 @@ export const fetchResults = createAsyncThunk(
         }
       }
       console.log('Fetching results for role:', getState().auth.user.role);
-      const endpoint = getState().auth.user.role === 'Admin' ? '/results/all' : '/results/teacher';
+      const role = getState().auth.user.role;
+      let endpoint;
+
+      // Determine endpoint based on role
+      switch (role) {
+        case 'Admin':
+          endpoint = '/results/all';
+          break;
+        case 'Teacher':
+          endpoint = '/results/teacher';
+          break;
+        case 'Student':
+          endpoint = '/results/student';
+          break;
+        default:
+          return rejectWithValue('Unauthorized role');
+      }
+
       const response = await axios.get(`${API_URL}${endpoint}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       console.log('API Response:', response.data);
-      return response.data.results || response.data;
+
+      // Process data based on role if needed
+      let data = response.data.results || response.data;
+      if (role === 'Student') {
+        data = data.map(result => ({
+          ...result,
+          subject: result.subject || 'Unknown', // Ensure subject exists
+        }));
+      }
+
+      return data;
     } catch (error) {
       console.error('Fetch Results Error:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch results');
     }
   }
 );
+
+// export const fetchResults = createAsyncThunk(
+//   'results/fetchResults',
+//   async (_, { rejectWithValue, getState, dispatch }) => {
+//     try {
+//       const { auth } = getState();
+//       const currentUser = getState().auth.user;
+//       console.log('Current user state:', currentUser); // Debug current user state
+//       if (!currentUser?.role) {
+//         console.warn('User role is undefined, fetching profile...');
+//         await dispatch(fetchProfile()).unwrap();
+//         const updatedUser = getState().auth.user;
+//         console.log('Updated user state after profile fetch:', updatedUser);
+//         if (!updatedUser?.role) {
+//           return rejectWithValue('User role not available after profile fetch');
+//         }
+//       }
+//       console.log('Fetching results for role:', getState().auth.user.role);
+//       const endpoint = getState().auth.user.role === 'Admin' ? '/results/all' : '/results/teacher';
+//       const response = await axios.get(`${API_URL}${endpoint}`, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       console.log('API Response:', response.data);
+//       return response.data.results || response.data;
+
+//     } catch (error) {
+//       console.error('Fetch Results Error:', error.response?.data || error.message);
+//       return rejectWithValue(error.response?.data?.message || 'Failed to fetch results');
+//     }
+//   }
+// );
 
 export const deleteResult = createAsyncThunk(
   'results/deleteResult',
@@ -123,14 +182,17 @@ const resultSlice = createSlice({
       .addCase(fetchResults.pending, (state) => {
         state.loading = true;
         state.error = null;
+        console.log('Fetch results pending');
       })
       .addCase(fetchResults.fulfilled, (state, action) => {
         state.loading = false;
-        state.results = action.payload;
+        console.log('Fetch results fulfilled, payload:', action.payload);
+        state.results = Array.isArray(action.payload) ? action.payload : action.payload.results || [];
       })
       .addCase(fetchResults.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        console.log('Fetch results rejected, error:', action.payload);
       })
       .addCase(deleteResult.pending, (state) => {
         state.loading = true;

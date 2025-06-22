@@ -31,15 +31,65 @@ export const fetchAttendanceRecords = createAsyncThunk(
   async (_, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.get(`${API_URL}/attendance/teacher`, {
+      if (!auth.token) {
+        return rejectWithValue('No authentication token available');
+      }
+
+      const role = auth.user?.role;
+      let endpoint;
+
+      if (role === 'Teacher') {
+        endpoint = `${API_URL}/attendance/teacher`;
+      } else if (role === 'Student') {
+        endpoint = `${API_URL}/attendance/student`;
+      } else {
+        return rejectWithValue('Unauthorized role');
+      }
+
+      const response = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      return response.data.attendance;
+
+      let data = response.data.attendance;
+      if (role === 'Student') {
+        data = data.map(att => ({
+          ...att,
+          records: att.records.map(record => ({
+            ...record,
+            student: record.student._id,
+          })),
+        }));
+      } else if (role === 'Teacher') {
+        data = data.map(att => ({
+          ...att,
+          records: att.records.map(record => ({
+            ...record,
+            student: record.student._id,
+          })),
+        }));
+      }
+
+      return data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch attendance records');
     }
   }
 );
+
+// export const fetchAttendanceRecords = createAsyncThunk(
+//   'attendance/fetchAttendanceRecords',
+//   async (_, { rejectWithValue, getState }) => {
+//     try {
+//       const { auth } = getState();
+//       const response = await axios.get(`${API_URL}/attendance/teacher`, {
+//         headers: { Authorization: `Bearer ${auth.token}` },
+//       });
+//       return response.data.attendance;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to fetch attendance records');
+//     }
+//   }
+// );
 
 export const submitAttendance = createAsyncThunk(
   'attendance/submitAttendance',
@@ -63,10 +113,10 @@ export const submitAttendance = createAsyncThunk(
 
 export const updateAttendance = createAsyncThunk(
   'attendance/updateAttendance',
-  async ({ attId, studentId, status }, { rejectWithValue, getState }) => {
+  async ({ attId, studentId, status, subject }, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const response = await axios.put(`${API_URL}/attendance/${attId}`, { studentId, status }, {
+      const response = await axios.put(`${API_URL}/attendance/${attId}`, { studentId, status, subject }, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       return response.data.attendance;

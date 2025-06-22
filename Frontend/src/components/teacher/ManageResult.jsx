@@ -24,6 +24,7 @@ function ManageResult() {
         await Promise.all([
           dispatch(fetchResults()),
           dispatch(fetchSubjects()),
+          // dispatch(user()),
           dispatch(fetchStudentsForAttendance()),
         ]);
       }

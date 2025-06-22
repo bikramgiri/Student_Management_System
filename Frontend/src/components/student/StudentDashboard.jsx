@@ -1,294 +1,130 @@
-// src/components/student/StudentDashboard.jsx
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { submitStudentLeave, fetchAllLeaves } from '../../redux/leaveSlice';
-import { fetchResults } from '../../redux/resultSlice';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { fetchAttendanceRecords } from '../../redux/attendanceSlice';
+import { fetchResults } from '../../redux/resultSlice';
+import { fetchAllLeaves } from '../../redux/leaveSlice';
 
 function StudentDashboard() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { results, loading: resultsLoading, error: resultsError } = useSelector((state) => state.results);
   const { attendances, loading: attendanceLoading, error: attendanceError } = useSelector((state) => state.attendance);
+  const { results, loading: resultsLoading, error: resultsError } = useSelector((state) => state.results);
   const { leaves, loading: leavesLoading, error: leavesError } = useSelector((state) => state.leaves);
 
-  const [activeTab, setActiveTab] = useState('attendance');
-  const ADMIN_ID = '67f14f9cafe71b4e73385c28'; // Replace with a real admin ID from your database
-
   useEffect(() => {
-    console.log('StudentDashboard mounted');
-    return () => console.log('StudentDashboard unmounted');
-  }, []);
-
-  const fetchData = useCallback(() => {
-    console.log('Fetching initial data');
-    dispatch(fetchResults());
     dispatch(fetchAttendanceRecords());
+    dispatch(fetchResults());
     dispatch(fetchAllLeaves());
   }, [dispatch]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const currentDate = new Date().toISOString().split('T')[0]; // Current date: 2025-06-22
+  const todayAttendance = attendances.filter(att => 
+    new Date(att.date).toISOString().split('T')[0] === currentDate
+  );
 
-  const AttendanceDisplay = memo(() => {
-    console.log('AttendanceDisplay rendered');
-    return (
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-2">Attendance</h2>
-        {attendanceLoading ? <p>Loading...</p> : attendanceError ? (
-          <p className="text-red-500">Error: {attendanceError}</p>
-        ) : attendances.length === 0 ? (
-          <p>No attendance records found.</p>
-        ) : (
-          <ul className="space-y-2">
-            {attendances.map((record, index) => (
-              <li key={index} className="flex justify-between">
-                <span>{new Date(record.date).toLocaleDateString()}</span>
-                <span className={`font-medium ${record.status === 'Present' ? 'text-green-600' : 'text-red-600'}`}>
-                  {record.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    );
-  });
+  // Aggregate attendance status for the current student
+  const studentTodayAttendance = todayAttendance.reduce((acc, att) => {
+    const studentRecords = att.records.filter(record => record.student.toString() === user._id);
+    studentRecords.forEach(record => {
+      acc[record.status] = (acc[record.status] || 0) + 1;
+    });
+    return acc;
+  }, { Present: 0, Absent: 0 });
 
-  const ResultsDisplay = memo(() => {
-    console.log('ResultsDisplay rendered');
-    return (
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-2">Results</h2>
-        {resultsLoading ? <p>Loading...</p> : resultsError ? (
-          <p className="text-red-500">Error: {resultsError}</p>
-        ) : results.length === 0 ? (
-          <p>No results available.</p>
-        ) : (
-          <ul className="space-y-2">
-            {results.map((result, index) => (
-              <li key={index} className="flex justify-between">
-                <span>{result.subject}</span>
-                <span className="font-medium">{result.marks}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    );
-  });
+  const pieData = [
+    { name: 'Present', value: studentTodayAttendance.Present },
+    { name: 'Absent', value: studentTodayAttendance.Absent },
+  ];
 
-  const LeaveApplication = memo(({ leaves, leavesLoading, leavesError }) => {
-    const dispatch = useDispatch();
-    const { _id: studentId } = useSelector((state) => state.auth.user);
-    const [leaveForm, setLeaveForm] = useState({ date: '', reason: '', admin: ADMIN_ID });
-    const [message, setMessage] = useState('');
+  const passFailData = results.map(result => ({
+    subject: result.subject,
+    pass: result.marks >= 40 ? 1 : 0,
+    fail: result.marks < 40 ? 1 : 0,
+  }));
 
-    const handleChange = useCallback((e) => {
-      const { name, value } = e.target;
-      console.log(`LeaveApplication handleChange: ${name}=${value}`);
-      setLeaveForm((prev) => ({ ...prev, [name]: value }));
-    }, []);
+  const COLORS = ['#4CAF50', '#F44336'];
 
-    const handleSubmit = useCallback((e) => {
-      e.preventDefault();
-      const payload = { ...leaveForm, studentId };
-      console.log('Submitting leave payload:', payload);  
-      
-      dispatch(submitStudentLeave({ ...leaveForm, studentId })).then((result) => {
-        if (result.meta.requestStatus === 'fulfilled') {
-          setMessage('Leave application submitted successfully!');
-          setLeaveForm({ date: '', reason: '', admin: ADMIN_ID });
-          dispatch(fetchAllLeaves());
-        } else {
-          console.error('Submit leave error:', result.payload); // Log for debugging
-          setMessage(`Failed to submit leave: ${result.payload}`);
-          }
-        setTimeout(() => setMessage(''), 3000);
-      });
-    }, [dispatch, leaveForm, studentId]);
+  // Calculate metrics
+  const totalSubjects = new Set(results.map(result => result.subject)).size;
+  const totalLeaveApplied = leaves ? leaves.filter(leave => leave.student === user._id).length : 0;
+  const totalAttendanceRecords = attendances.length;
+  const totalPresent = attendances.reduce((sum, att) => sum + att.records.filter(r => r.student.toString() === user._id && r.status === 'Present').length, 0);
+  const percentagePresent = totalAttendanceRecords > 0 ? ((totalPresent / totalAttendanceRecords) * 100).toFixed(2) : 0;
+  const percentageAbsent = totalAttendanceRecords > 0 ? (100 - percentagePresent).toFixed(2) : 0;
 
-    const handleRefresh = useCallback(() => {
-      setMessage('Refreshing leave status...');
-      dispatch(fetchAllLeaves()).then((result) => {
-        if (result.meta.requestStatus === 'fulfilled') {
-          setMessage('Leave status refreshed successfully');
-          setTimeout(() => setMessage(''), 2000);
-        } else {
-          setMessage('Failed to refresh leave status');
-          setTimeout(() => setMessage(''), 5000);
-        }
-      });
-    }, [dispatch]);
+  if (attendanceLoading || resultsLoading || leavesLoading) return <p>Loading...</p>;
+  if (attendanceError || resultsError || leavesError) return <p>Error: {attendanceError || resultsError || leavesError}</p>;
 
-    console.log('LeaveApplication rendered');
-    return (
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-2">Leave Application</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={leaveForm.date}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Recipient</label>
-            <select
-              name="admin"
-              value={leaveForm.admin}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              required
-            >
-              <option value="">Select Admin</option>
-              <option value={ADMIN_ID}>Admin</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Reason</label>
-            <textarea
-              name="reason"
-              value={leaveForm.reason}
-              onChange={handleChange}
-              placeholder="Enter your reason..."
-              className="w-full border p-2 rounded"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-            disabled={!leaveForm.admin || leavesLoading}
-          >
-            Submit
-          </button>
-        </form>
-        {message && (
-          <p className={`mt-2 ${message.includes('successfully') ? 'text-green-600' : 'text-red-500'}`}>{message}</p>
-        )}
-        <div className="mt-4 flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Leave Status</h3>
-          <button
-            onClick={handleRefresh}
-            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
-            disabled={leavesLoading}
-          >
-            {leavesLoading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-        {leavesLoading ? <p>Loading...</p> : leavesError ? (
-          <p className="text-red-500">Error: {leavesError}</p>
-        ) : leaves.length === 0 ? (
-          <p>No leave applications submitted.</p>
-        ) : (
-          <ul className="space-y-2 mt-2">
-            {leaves.map((leave) => (
-              <li key={leave._id} className="flex justify-between items-center">
-                <span>{new Date(leave.date).toLocaleDateString()} - {leave.reason}</span>
-                <span
-                  className={`font-medium ${
-                    leave.status === 'Approved' ? 'text-green-600' : leave.status === 'Rejected' ? 'text-red-600' : 'text-yellow-600'
-                  }`}
-                >
-                  {leave.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    );
-  });
-
-  // const Chat = memo(({ userId }) => {
-  //   const [chat, setChat] = useState({ recipient: '', messages: [], input: '' });
-
-  //   const handleChatChange = useCallback((e) => {
-  //     console.log(`Chat handleChange: input=${e.target.value}`);
-  //     setChat((prev) => ({ ...prev, input: e.target.value }));
-  //   }, []);
-
-  //   const handleChatSubmit = useCallback((e) => {
-  //     e.preventDefault();
-  //     if (chat.input.trim() && chat.recipient) {
-  //       setChat((prev) => ({
-  //         ...prev,
-  //         messages: [...prev.messages, { sender: userId, text: prev.input, timestamp: new Date() }],
-  //         input: '',
-  //       }));
-  //       console.log(`Message to ${chat.recipient}: ${chat.input}`);
-  //     }
-  //   }, [chat.input, chat.recipient, userId]);
-
-  //   console.log('Chat rendered');
-  //   return (
-  //     <div className="bg-white p-4 rounded-lg shadow">
-  //       <h2 className="text-xl font-semibold mb-2">Chat</h2>
-  //       <select
-  //         value={chat.recipient}
-  //         onChange={(e) => setChat((prev) => ({ ...prev, recipient: e.target.value, messages: [] }))}
-  //         className="w-full border p-2 rounded mb-4"
-  //       >
-  //         <option value="">Select Recipient</option>
-  //         <option value={ADMIN_ID}>Admin</option>
-  //       </select>
-  //       {chat.recipient ? (
-  //         <>
-  //           <div className="h-64 overflow-y-auto border p-2 rounded mb-4">
-  //             {chat.messages.map((msg, index) => (
-  //               <div key={index} className={`mb-2 ${msg.sender === userId ? 'text-right' : 'text-left'}`}>
-  //                 <span className={`inline-block p-2 rounded ${msg.sender === userId ? 'bg-blue-100' : 'bg-gray-100'}`}>
-  //                   {msg.text}
-  //                 </span>
-  //                 <p className="text-xs text-gray-500">{new Date(msg.timestamp).toLocaleTimeString()}</p>
-  //               </div>
-  //             ))}
-  //           </div>
-  //           <form onSubmit={handleChatSubmit} className="flex gap-2">
-  //             <input
-  //               type="text"
-  //               value={chat.input}
-  //               onChange={handleChatChange}
-  //               placeholder="Type a message..."
-  //               className="flex-grow border p-2 rounded"
-  //             />
-  //             <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-  //               Send
-  //             </button>
-  //           </form>
-  //         </>
-  //       ) : (
-  //         <p>Select a recipient to start chatting.</p>
-  //       )}
-  //     </div>
-  //   );
-  // });
-
-  console.log('StudentDashboard rendered');
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Welcome, {user.name}</h1>
-      <div className="flex space-x-4 mb-6 border-b">
-        {['attendance', 'results', 'leave'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-2 px-4 ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-600'}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Student Dashboard - {user.name}</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Total Subjects */}
+        <div className="bg-teal-500 text-white p-4 rounded shadow">
+          <p className="text-lg">Total Subjects</p>
+          <p className="text-2xl font-bold">{totalSubjects}</p>
+        </div>
+        {/* Total Leave Applied */}
+        <div className="bg-green-500 text-white p-4 rounded shadow">
+          <p className="text-lg">Total Leave Applied</p>
+          <p className="text-2xl font-bold">{totalLeaveApplied}</p>
+        </div>
+        {/* Percentage Present */}
+        <div className="bg-yellow-500 text-white p-4 rounded shadow">
+          <p className="text-lg">Percentage Present</p>
+          <p className="text-2xl font-bold">{percentagePresent}%</p>
+        </div>
+        {/* Percentage Absent */}
+        <div className="bg-red-500 text-white p-4 rounded shadow">
+          <p className="text-lg">Percentage Absent</p>
+          <p className="text-2xl font-bold">{percentageAbsent}%</p>
+        </div>
       </div>
-      {activeTab === 'attendance' && <AttendanceDisplay />}
-      {activeTab === 'results' && <ResultsDisplay />}
-      {activeTab === 'leave' && <LeaveApplication leaves={leaves} leavesLoading={leavesLoading} leavesError={leavesError} />}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded shadow">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Attendance Summary (Today)</h3>
+          <div className="flex justify-between mb-4">
+            <div className="bg-green-100 p-2 rounded text-sm">
+              Present: {studentTodayAttendance.Present || 0}
+            </div>
+            <div className="bg-red-100 p-2 rounded text-sm">
+              Absent: {studentTodayAttendance.Absent || 0}
+            </div>
+          </div>
+          <PieChart width={400} height={400}>
+            <Pie
+              data={pieData}
+              cx={200}
+              cy={200}
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+              label
+            >
+              {pieData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+          {attendanceError && <p className="text-red-500 mt-2">Error: {attendanceError}</p>}
+        </div>
+        <div className="bg-white p-6 rounded shadow">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Pass/Fail Summary</h3>
+          <BarChart width={500} height={300} data={passFailData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="subject" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="pass" fill="#4CAF50" name="Pass" />
+            <Bar dataKey="fail" fill="#F44336" name="Fail" />
+          </BarChart>
+          {resultsError && <p className="text-red-500 mt-2">Error: {resultsError}</p>}
+        </div>
+      </div>
     </div>
   );
 }

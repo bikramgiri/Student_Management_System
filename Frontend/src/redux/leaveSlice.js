@@ -5,14 +5,13 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const submitStudentLeave = createAsyncThunk(
   'leaves/submitStudentLeave',
-  async (leaveData, { rejectWithValue, getState, dispatch }) => {
+  async (leaveData, { rejectWithValue, getState }) => {
     try {
       const { auth } = getState();
-      const { data } = await axios.post(`${API_URL}/leaves/student`, leaveData, {
+      const response = await axios.post(`${API_URL}/leaves`, leaveData, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
-      dispatch(fetchAllLeaves());
-      return data;
+      return response.data.leave;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to submit leave');
     }
@@ -41,7 +40,16 @@ export const fetchAllLeaves = createAsyncThunk(
     try {
       const { auth } = getState();
       const { role, _id: userId } = getState().auth.user || {};
-      const url = role === 'Teacher' ? `${API_URL}/leaves?teacher=${userId}` : `${API_URL}/leaves`;
+      let url;
+
+      if (role === 'Teacher') {
+        url = `${API_URL}/leaves?teacher=${userId}`;
+      } else if (role === 'Student') {
+        url = `${API_URL}/leaves?student=${userId}`;
+      } else {
+        url = `${API_URL}/leaves`; // Default for other roles (e.g., Admin)
+      }
+
       const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
@@ -57,7 +65,9 @@ export const fetchAllLeaves = createAsyncThunk(
 //   async (_, { rejectWithValue, getState }) => {
 //     try {
 //       const { auth } = getState();
-//       const { data } = await axios.get(`${API_URL}/leaves`, {
+//       const { role, _id: userId } = getState().auth.user || {};
+//       const url = role === 'Teacher' ? `${API_URL}/leaves?teacher=${userId}` : `${API_URL}/leaves`;
+//       const { data } = await axios.get(url, {
 //         headers: { Authorization: `Bearer ${auth.token}` },
 //       });
 //       return data.leaves;
@@ -88,6 +98,21 @@ export const updateTeacherLeave = createAsyncThunk(
     try {
       const { auth } = getState();
       const { data } = await axios.put(`${API_URL}/leaves/teacher/${id}`, { reason }, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+      return data.leave;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update leave reason');
+    }
+  }
+);
+
+export const updateStudentLeave = createAsyncThunk(
+  'leaves/updateStudentLeave',
+  async ({ id, reason }, { rejectWithValue, getState }) => {
+    try {
+      const { auth } = getState();
+      const { data } = await axios.put(`${API_URL}/leaves/student/${id}`, { reason }, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       return data.leave;
@@ -128,7 +153,7 @@ const leaveSlice = createSlice({
       })
       .addCase(submitStudentLeave.fulfilled, (state, action) => {
         state.loading = false;
-        state.leaves.push(action.payload.leave);
+        state.leaves.push(action.payload);
       })
       .addCase(submitStudentLeave.rejected, (state, action) => {
         state.loading = false;
@@ -185,6 +210,21 @@ const leaveSlice = createSlice({
         );
       })
       .addCase(updateTeacherLeave.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateStudentLeave.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateStudentLeave.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedLeave = action.payload;
+        state.leaves = state.leaves.map((leave) =>
+          leave._id === updatedLeave._id ? updatedLeave : leave
+        );
+      })
+      .addCase(updateStudentLeave.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
