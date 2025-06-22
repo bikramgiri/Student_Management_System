@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { fetchAttendanceRecords } from '../../redux/attendanceSlice';
@@ -11,12 +11,29 @@ function StudentDashboard() {
   const { attendances, loading: attendanceLoading, error: attendanceError } = useSelector((state) => state.attendance);
   const { results, loading: resultsLoading, error: resultsError } = useSelector((state) => state.results);
   const { leaves, loading: leavesLoading, error: leavesError } = useSelector((state) => state.leaves);
+  const [message, setMessage] = useState('');
+  
 
   useEffect(() => {
     dispatch(fetchAttendanceRecords());
     dispatch(fetchResults());
     dispatch(fetchAllLeaves());
   }, [dispatch]);
+
+    const handleRefresh = () => {
+      setMessage('Refreshing data...');
+      Promise.all([
+        dispatch(fetchAttendanceRecords()),
+        dispatch(fetchAllLeaves()),
+        dispatch(fetchResults()),
+      ]).then(() => {
+        setMessage('Data refreshed successfully');
+        setTimeout(() => setMessage(''), 2000);
+      }).catch(() => {
+        setMessage('Failed to refresh some data');
+        setTimeout(() => setMessage(''), 5000);
+      });
+    };
 
   const currentDate = new Date().toISOString().split('T')[0]; // Current date: 2025-06-22
   const todayAttendance = attendances.filter(att => 
@@ -47,7 +64,7 @@ function StudentDashboard() {
 
   // Calculate metrics
   const totalSubjects = new Set(results.map(result => result.subject)).size;
-  const totalLeaveApplied = leaves ? leaves.filter(leave => leave.student === user._id).length : 0;
+  const totalLeaveApplied = leaves ? leaves.filter(leave => leave.student && leave.student._id === user._id).length : 0;
   const totalAttendanceRecords = attendances.length;
   const totalPresent = attendances.reduce((sum, att) => sum + att.records.filter(r => r.student.toString() === user._id && r.status === 'Present').length, 0);
   const percentagePresent = totalAttendanceRecords > 0 ? ((totalPresent / totalAttendanceRecords) * 100).toFixed(2) : 0;
@@ -81,6 +98,17 @@ function StudentDashboard() {
           <p className="text-2xl font-bold">{percentageAbsent}%</p>
         </div>
       </div>
+
+      <div className="mb-6">
+        {message && <p className="text-gray-500 mb-2">{message}</p>}
+        <button
+          onClick={handleRefresh}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Refresh Data
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded shadow">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Attendance Summary (Today)</h3>

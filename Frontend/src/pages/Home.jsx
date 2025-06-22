@@ -71,12 +71,12 @@ const Home = () => {
             >
               Login
             </button>
-            <button
+            {/* <button
               className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-md hover:bg-green-600"
               onClick={() => navigate("/signup")}
             >
               Signup
-            </button>
+            </button> */}
           </div>
         </>
       )}

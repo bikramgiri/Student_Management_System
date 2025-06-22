@@ -33,7 +33,7 @@ function Navbar() {
           <>
             <Link to="/" className="font-bold text-xl px-3 py-1 mr-4">Home</Link>
             <Link to="/login" className="font-bold text-xl px-3 py-1 mr-4">Login</Link>
-            <Link to="/signup" className="font-bold text-xl px-3 py-1 mr-4">Sign Up</Link>
+            {/* <Link to="/signup" className="font-bold text-xl px-3 py-1 mr-4">Sign Up</Link> */}
           </>
         )}
       </div>

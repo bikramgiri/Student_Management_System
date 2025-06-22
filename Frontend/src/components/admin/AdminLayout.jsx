@@ -19,8 +19,8 @@ function AdminLayout() {
         <nav className="space-y-2">
           <Link to="/admin/dashboard" className="block bg-blue-600 p-2 rounded">Home</Link>
           <Link to="/admin/profile" className="block p-2 hover:bg-gray-700 rounded">View/Edit Profile</Link>
-          <Link to="/admin/notify-teachers" className="block p-2 hover:bg-gray-700 rounded">Notify Teacher</Link>
-          <Link to="/admin/notify-students" className="block p-2 hover:bg-gray-700 rounded">Notify Student</Link>
+          {/* <Link to="/admin/notify-teachers" className="block p-2 hover:bg-gray-700 rounded">Notify Teacher</Link> */}
+          {/* <Link to="/admin/notify-students" className="block p-2 hover:bg-gray-700 rounded">Notify Student</Link> */}
           <Link to="/admin/manage-teachers" className="block p-2 hover:bg-gray-700 rounded">Manage Teachers</Link>
           <Link to="/admin/manage-students" className="block p-2 hover:bg-gray-700 rounded">Manage Students</Link>
           <Link to="/admin/manage-subjects" className="block p-2 hover:bg-gray-700 rounded">Manage Subjects</Link>
