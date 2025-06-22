@@ -1,6 +1,7 @@
 const Leave = require('../models/Leave');
 const User = require('../models/User');
 
+// Get leaves for teachers
 exports.getStudentLeaves = async (req, res) => {
   try {
     const { role, _id: studentId } = req.user;
@@ -264,8 +265,6 @@ exports.updateStudentLeave = async (req, res) => {
 
     // Correct population: Use a single populate call with multiple fields
     await leave.populate('student','name email')
-      // await leave.populate('teacher', 'name email');
-
 
     res.status(200).json({
       message: 'Leave reason updated successfully',
