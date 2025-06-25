@@ -199,6 +199,7 @@ const initialState = {
   potentialStudents: [],
   loading: false,
   error: null,
+  theme: localStorage.getItem('theme') || 'light',
 };
 
 const authSlice = createSlice({
@@ -212,8 +213,10 @@ const authSlice = createSlice({
       state.potentialStudents = [];
       state.loading = false;
       state.error = null;
+      state.theme = 'light';
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.setItem('theme', 'light');
     },
   },
   extraReducers: (builder) => {
@@ -226,8 +229,10 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.theme = action.payload.user.theme || 'light';
         localStorage.setItem('token', action.payload.token);
         localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem('theme', state.theme);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -277,7 +282,9 @@ const authSlice = createSlice({
       .addCase(fetchProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
+        state.theme = action.payload.theme || 'light';
         localStorage.setItem('user', JSON.stringify(action.payload));
+        localStorage.setItem('theme', state.theme);
       })
       .addCase(fetchProfile.rejected, (state, action) => {
         state.loading = false;
@@ -291,25 +298,15 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.theme = action.payload.user.theme || 'light';
         localStorage.setItem('token', action.payload.token);
         localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem('theme', state.theme);
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-      // .addCase(fetchSubjects.pending, (state) => {
-      //   state.loading = true;
-      //   state.error = null;
-      // })
-      // .addCase(fetchSubjects.fulfilled, (state, action) => {
-      //   state.loading = false;
-      //   state.subjects = action.payload; // Assuming you want to store subjects in auth state
-      // })
-      // .addCase(fetchSubjects.rejected, (state, action) => {
-      //   state.loading = false;
-      //   state.error = action.payload;
-      // });
   },
 });
 

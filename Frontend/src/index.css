@@ -1,1 +1,26 @@
 @import "tailwindcss";
+
+/* Light Mode (default) */
+:root {
+  --background: #ffffff;
+  --text: #1f2937;
+  --card-bg: #f3f4f6;
+}
+
+/* Dark Mode */
+.dark {
+  --background: #1f2937;
+  --text: #f3f4f6;
+  --card-bg: #374151;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card {
+  background-color: var(--card-bg);
+  transition: background-color 0.3s ease;
+}
