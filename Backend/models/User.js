@@ -42,6 +42,11 @@ const userSchema = new mongoose.Schema({
       message: 'Teachers must have at least one subject',
     },
   },
+  theme: { // New field for theme preference
+    type: String,
+    enum: ['light', 'dark'],
+    default: 'light',
+  },
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
